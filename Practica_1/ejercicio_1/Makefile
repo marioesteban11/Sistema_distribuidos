@@ -11,8 +11,8 @@ SRC_PROXY = proxy.h proxy.c
 SRC_1 = client.c $(SRC_PROXY)
 SRC_2 = server.c $(SRC_PROXY)
 
-OBJ1 = client.o proxy.o
-OBJ2 = server.o proxy.o
+OBJ1 = client.o
+OBJ2 = server.o 
 
 #all:  $(p1) $(p2)
 all: $(OBJ1) $(OBJ2)
