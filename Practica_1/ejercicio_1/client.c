@@ -44,23 +44,24 @@ int main(int argc, char *argv[])
     char sendBuff[MAX];
     bzero(sendBuff, MAX);
     //mandamos el mensaje al servidor
-    char msg[MAX] = "Hello server! \r \n ";
+    char msg[MAX] = "Hello server! ";
     // strncat(msg, argv[1], sizeof(argv[1]));
     //strncat(sendBuff, msg, sizeof(msg));
     //strncat(sendBuff, "\n", sizeof("\n"));
-    //printf("mandadoooo  %s\n", msg  );
-    send(sockfd, msg, strlen(msg), 0); 
     
+    send(sockfd, msg, strlen(msg), 0); 
+    printf("> ");
+    printf("  %s\n", msg  );
 
     char buff[MAX];
     bzero(buff, MAX);
-    FD_ZERO(&readmask); // Reset la mascara
-    FD_SET(sockfd, &readmask); // Asignamos el nuevo descriptor
-    FD_SET(STDIN_FILENO, &readmask); // Entrada
-    timeout.tv_sec=3; timeout.tv_usec=500000; // Timeout de 0.1 seg.
+    //FD_ZERO(&readmask); // Reset la mascara
+    //FD_SET(sockfd, &readmask); // Asignamos el nuevo descriptor
+    //FD_SET(STDIN_FILENO, &readmask); // Entrada
+    //timeout.tv_sec=3; timeout.tv_usec=500000; // Timeout de 0.1 seg.
 
 
-    select(sockfd, &readmask, NULL, NULL, &timeout);
+    //select(sockfd, &readmask, NULL, NULL, &timeout);
     if ((recv(sockfd, (void*) buff, sizeof(buff), 0)) > 0)
     {
         // Escribimos el contenido de buffer en la salida estandar.
@@ -68,11 +69,13 @@ int main(int argc, char *argv[])
         if (fputs(buff, stdout) == EOF) {
             fprintf(stderr, "\n Error : Fputs error\n");
         }
-        //printf("\n");
+        printf("\n");
     }
-    close(sockfd);
-    
+    if (close(sockfd) < 0) {
+        printf("No se ha cerrado el cliente correctamente\n");
+        exit(1);
 
+    }
     // Cerramos el socket.
     
 }

@@ -70,18 +70,25 @@ int main(int argc, char *argv[])
         if (fputs(buff, stdout) == EOF) {
             fprintf(stderr, "\n Error : Fputs error\n");
         }
+        printf("\n");
     }
     
     //enviamos el mensaje al cliente
     char sendBuff[MAX];
     //bzero(sendBuff, MAX); 
-
-    char msg[MAX] = "Hello client!  \r\n";
+    printf(">  ");
+    char msg[MAX] = "Hello client!";
     //strncat(sendBuff, msg, sizeof(msg));
     send(connfd, msg, strlen(msg), 0); 
+    printf("   %s\n", msg  );
     // Cerramos el socket.
-    close(connfd);
-    close(sockfd);
+    //close(connfd);
+    //close(sockfd);
     
+    if (close(sockfd) < 0 || close(connfd) < 0) {
+        printf("No se ha cerrado el cliente correctamente\n");
+        exit(1);
+
+    }
     return 0;
 }
