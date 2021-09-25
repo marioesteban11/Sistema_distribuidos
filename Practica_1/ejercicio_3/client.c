@@ -44,10 +44,10 @@ int main(int argc, char *argv[])
     char sendBuff[MAX];
     bzero(sendBuff, MAX);
     //mandamos el mensaje al servidor
-    char msg[MAX] = "Hello server! ";
-    // strncat(msg, argv[1], sizeof(argv[1]));
-    //strncat(sendBuff, msg, sizeof(msg));
-    //strncat(sendBuff, "\n", sizeof("\n"));
+    char msg[MAX] = "Hello server! From server: ";
+    strcpy(sendBuff, argv[1]);
+    strcat(sendBuff, "\n");
+    strcat (msg, sendBuff);
     
     send(sockfd, msg, strlen(msg), 0); 
     printf("> ");
@@ -58,11 +58,11 @@ int main(int argc, char *argv[])
     FD_ZERO(&readmask); // Reset la mascara
     FD_SET(sockfd, &readmask); // Asignamos el nuevo descriptor
     FD_SET(STDIN_FILENO, &readmask); // Entrada
-    timeout.tv_sec=3; timeout.tv_usec=500000; // Timeout de 0.1 seg.
+    timeout.tv_sec = 3; timeout.tv_usec = 500000; // Timeout de 0.1 seg.
 
 
     select(sockfd, &readmask, NULL, NULL, &timeout);
-    if ((recv(sockfd, (void*) buff, sizeof(buff), 0)) > 0)
+    if ((recv(sockfd, (void*) buff, sizeof(buff), MSG_DONTWAIT)) > 0)
     {
         // Escribimos el contenido de buffer en la salida estandar.
         printf("+++  ");
@@ -76,6 +76,8 @@ int main(int argc, char *argv[])
         exit(1);
 
     }
+
+    printf("%d\n", sockfd);
     // Cerramos el socket.
     
 }

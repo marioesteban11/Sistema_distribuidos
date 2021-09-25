@@ -90,7 +90,6 @@ int main(int argc, char *argv[])
     // Cerramos el socket.
     //close(connfd);
     //close(sockfd);
-    
     if (close(sockfd) < 0 || close(connfd) < 0) {
         printf("No se ha cerrado el cliente correctamente\n");
         exit(1);

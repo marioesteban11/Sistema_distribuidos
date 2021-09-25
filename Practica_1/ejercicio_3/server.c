@@ -19,18 +19,18 @@ void *threadfunction(void *arg)
     bzero(buff, MAX);
     int n; 
     int connfd = *(int *)arg;
-    
+    printf("connfd DENTRO de los hilos, %d\n", connfd);
+    //printf("MACARRONES CON TOMATICO\n");
     fd_set readmask;
     struct timeval timeout;
 
     FD_ZERO(&readmask); // Reset la mascara
     FD_SET(connfd, &readmask); // Asignamos el nuevo descriptor
     FD_SET(STDIN_FILENO, &readmask); // Entrada
-    timeout.tv_sec=3; timeout.tv_usec=500000; // Timeout de 0.1 seg.
-
+    timeout.tv_sec = 3; timeout.tv_usec = 500000; 
 
     select(connfd, &readmask, NULL, NULL, &timeout);
-    if ((n = recv(connfd, (void*) buff, sizeof(buff), MSG_DONTWAIT)) > 0)
+    if ((recv(connfd, (void*) buff, sizeof(buff), MSG_DONTWAIT)) > 0)
     {
         // Escribimos el contenido de buffer en la salida estandar.
         printf("+++  ");
@@ -42,8 +42,9 @@ void *threadfunction(void *arg)
     //enviamos el mensaje al cliente
     char sendBuff[MAX];
     bzero(sendBuff, MAX); 
-
+    printf(">  ");
     char msg[MAX] = "Hello client!  \r\n";
+    printf("   %s\n", msg  );
     //strncat(sendBuff, msg, sizeof(msg));
     send(connfd, sendBuff, strlen(sendBuff), 0); 
     // Cerramos el socket.
@@ -95,6 +96,7 @@ int main(int argc, char *argv[])
 
     while(1) {
         int pos;
+        //printf("Hola, estamos FUERA del thread\n");
         for (int i = 0; i < NUM_HILOS; i++) {
             // El servidor quedará a la espera y aceptará a los clientes que seconecten al socket.
             connfd = accept(sockfd, (struct sockaddr*) NULL, NULL);
@@ -104,6 +106,7 @@ int main(int argc, char *argv[])
             } else {
                 printf("Server accepts the client...\n");
             }
+            printf("connfd FUERA de los hilos, %d\n", connfd);
 
             pos = i;
             //creamos los threads para aceptar y mandar los mensajes a los clientes

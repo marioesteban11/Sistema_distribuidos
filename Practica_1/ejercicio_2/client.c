@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     //strncat(sendBuff, msg, sizeof(msg));
     //strncat(sendBuff, "\n", sizeof("\n"));
     
-    //send(sockfd, msg, strlen(msg), 0); 
+    send(sockfd, msg, strlen(msg), 0); 
     printf("> ");
     printf("  %s\n", msg  );
 
