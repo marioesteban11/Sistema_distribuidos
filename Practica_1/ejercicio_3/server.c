@@ -19,7 +19,6 @@ void *threadfunction(void *arg)
     bzero(buff, MAX);
     int n; 
     int connfd = *(int *)arg;
-    printf("connfd DENTRO de los hilos, %d\n", connfd);
     //printf("MACARRONES CON TOMATICO\n");
     fd_set readmask;
     struct timeval timeout;
@@ -44,9 +43,8 @@ void *threadfunction(void *arg)
     bzero(sendBuff, MAX); 
     printf(">  ");
     char msg[MAX] = "Hello client!  \r\n";
-    printf("   %s\n", msg  );
     //strncat(sendBuff, msg, sizeof(msg));
-    send(connfd, sendBuff, strlen(sendBuff), 0); 
+    send(connfd, msg, strlen(msg), 0); 
     // Cerramos el socket.
     close(connfd);
 }
@@ -106,7 +104,6 @@ int main(int argc, char *argv[])
             } else {
                 printf("Server accepts the client...\n");
             }
-            printf("connfd FUERA de los hilos, %d\n", connfd);
 
             pos = i;
             //creamos los threads para aceptar y mandar los mensajes a los clientes
