@@ -19,14 +19,14 @@ void *threadfunction(void *arg)
     bzero(buff, MAX);
     int n; 
     int connfd = *(int *)arg;
-    //printf("MACARRONES CON TOMATICO\n");
+
     fd_set readmask;
     struct timeval timeout;
 
     FD_ZERO(&readmask); // Reset la mascara
     FD_SET(connfd, &readmask); // Asignamos el nuevo descriptor
     FD_SET(STDIN_FILENO, &readmask); // Entrada
-    timeout.tv_sec = 3; timeout.tv_usec = 500000; 
+    timeout.tv_sec = 2; timeout.tv_usec = 500000; 
 
     select(connfd, &readmask, NULL, NULL, &timeout);
     if ((recv(connfd, (void*) buff, sizeof(buff), MSG_DONTWAIT)) > 0)
@@ -43,6 +43,7 @@ void *threadfunction(void *arg)
     bzero(sendBuff, MAX); 
     printf(">  ");
     char msg[MAX] = "Hello client!  \r\n";
+    printf("   %s\n", msg  );
     //strncat(sendBuff, msg, sizeof(msg));
     send(connfd, msg, strlen(msg), 0); 
     // Cerramos el socket.

@@ -75,7 +75,8 @@ int main(int argc, char *argv[])
         printf("No se ha cerrado el cliente correctamente\n");
         exit(1);
 
-    };
+    }
+
     // Cerramos el socket.
     
 }
