@@ -7,9 +7,8 @@
 CC = gcc
 CFLAGS = -g -O2 -pthread
 
-SRC_PROXY = proxy.h proxy.c
-SRC_1 = client.c $(SRC_PROXY)
-SRC_2 = server.c $(SRC_PROXY)
+SRC_1 = client.c 
+SRC_2 = server.c 
 
 OBJ1 = client.o 
 OBJ2 = server.o 
