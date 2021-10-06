@@ -23,4 +23,4 @@ all: $(OBJ1) $(OBJ2) $(OBJ3)
 	gcc ${CFLAGS} -o p3 $(OBJ3)
 
 clean:
-	$(RM) $(OBJ1) $(OBJ2) $(OBJ3) client server
+	$(RM) $(OBJ1) $(OBJ2) $(OBJ3) p1 p2 p3

@@ -32,3 +32,14 @@ int get_clock_lamport();
 void notify_ready_shutdown();
 // Notifica que va a realizar el shutdown correctamente (SHUTDOWN_ACK)
 void notify_shutdown_ack();
+
+
+
+///Funciones para conectar el cliente y el server
+
+//Inicializa el cliente en un ip y con un puerto determinado
+int client_conection(char* ip, int port);
+
+int server_conection(char* ip,int port );
+
+int aceptar_cliente();
