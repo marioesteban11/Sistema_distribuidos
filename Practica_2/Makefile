@@ -12,9 +12,9 @@ SRC_1 = p1.c $(SRC_PROXY)
 SRC_2 = p2.c $(SRC_PROXY)
 SRC_3 = p3.c $(SRC_PROXY)
 
-OBJ1 = p1.o
-OBJ2 = p2.o
-OBJ3 = p3.o
+OBJ1 = p1.o proxy.o 
+OBJ2 = p2.o proxy.o 
+OBJ3 = p3.o proxy.o 
 
 #all:  $(p1) $(p2)
 all: $(OBJ1) $(OBJ2) $(OBJ3)

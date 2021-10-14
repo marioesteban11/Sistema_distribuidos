@@ -6,13 +6,20 @@
 #include <string.h>
 #include <sys/select.h>
 
+#include "proxy.h"
 
 #define MAX 256
 #define PORT 8080
 
 int main(int argc, char *argv[])
 {
-    int a = 4;
+    set_name("p3");
+    set_ip_port("127.0.0.1", 8000);
+
+    //Conectamos con el server
+    client_connection();
+
+
     return 0;
     
 }

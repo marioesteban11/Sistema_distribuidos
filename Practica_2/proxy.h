@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/select.h>
 
+
 enum operations {
     READY_TO_SHUTDOWN = 0,
     SHUTDOWN_NOW,
@@ -16,7 +17,7 @@ enum operations {
 
 struct message {
     char origin[20];
-    operations action;
+    enum operations action;
     unsigned int clock_lamport;
 };
 
@@ -38,8 +39,8 @@ void notify_shutdown_ack();
 ///Funciones para conectar el cliente y el server
 
 //Inicializa el cliente en un ip y con un puerto determinado
-int client_conection(char* ip, int port);
+int client_connection();
 
-int server_conection(char* ip,int port );
+int server_connection();
 
-int aceptar_cliente();
+int wait_client_shotdown();
