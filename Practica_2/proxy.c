@@ -1,12 +1,28 @@
 #include "proxy.h"
 
 //Variables para el cliente y el servidor
-int sockfd = 0, connfd_p1 = 0;
-int connfd_p2 = 0, connfd_p3 = 0;
+int sockfd = 0, connfd_p1 = 0, connfd_p2 = 0, connfd_p3 = 0;
 struct sockaddr_in servaddr;
 struct sockaddr_in serv_addr;
 
 struct message message;
+
+pthread_t thread;
+
+// Actualizamos el reloj de lamport
+unsigned int lamport_increase(struct message lamport) {
+    unsigned int number_lamport;
+
+    if (lamport.clock_lamport < message.clock_lamport) {
+        number_lamport = message.clock_lamport;
+    }else {
+        number_lamport = lamport.clock_lamport;
+    }
+    message.clock_lamport = number_lamport;
+    message.clock_lamport++;
+
+    return message.clock_lamport;
+}
 
 // Establece el nombre del proceso (para los logs y trazas)
 void set_name (char name[2]){
@@ -28,7 +44,7 @@ void set_ip_port (char* ip, unsigned int port){
 // Obtiene el valor del reloj de lamport.
 // Utilízalo cada vez que necesites consultar el tiempo.
 int get_clock_lamport(){
-
+    return message.clock_lamport;
 }
 // Notifica que está listo para realizar el apagado (READY_TO_SHUTDOWN)
 void notify_ready_shutdown(){
@@ -37,6 +53,7 @@ void notify_ready_shutdown(){
     // Copiamos el nombre de nuestra maquina para asi poder mandarlo
     strcpy(ready.origin, message.origin); 
     // Cogemos los relojes de lamport oportunos para cada momento
+    message.clock_lamport++;
     ready.clock_lamport = message.clock_lamport;
     //Decimos que nuestro pc esta listo para apagarse
     ready.action = READY_TO_SHUTDOWN;
@@ -60,6 +77,7 @@ void notify_shutdown_ack(){
 
     // Cogemos los relojes de lamport oportunos para cada momento
 
+    message.clock_lamport++;
     ready.clock_lamport = message.clock_lamport;
     //Decimos que nuestro pc esta listo para apagarse
     ready.action = READY_TO_SHUTDOWN;
@@ -73,6 +91,9 @@ void notify_shutdown_ack(){
     }
 }
 
+
+
+//Recibe el READY_TO_SHOTDOWN de los clientes
 int wait_client_shotdown() {
     struct message receive;
     // Aceptamos el cliente
@@ -83,30 +104,85 @@ int wait_client_shotdown() {
     } else {
         printf("Server accepts the client...\n");
     }
-
+    printf("Estamos dentro del receive del server\n");
     // Esperamos a recibir un mensaje
     if ((recv(connfd_p2, &receive, sizeof(receive),0)) < 0) 
     {
         printf("Recv from the client failed...\n");
     }else {
+        
         if(receive.action == 0) // Comprobamos que el mensaje recibido sea el esperado
             {
-            receive.clock_lamport = reloj_Lamport(message); // Actualizamos el reloj de Lamport
+            receive.clock_lamport = lamport_increase(receive); // Actualizamos el reloj de Lamport
             printf("%s, %d, RECV (%s), READY_TO_SHUTDOWN\n", message.origin, receive.clock_lamport, receive.origin);
         } else {
             printf("This is not the correct action\n");
             }   
     }
+    //De que cliente es el mensaje 
+    if(message.origin == "p1") {
+        connfd_p1 = connfd_p2;
+        }
+    else if(message.origin == "p3") { //message.origin[1] - '0' == 3
+        connfd_p3 = connfd_p2;
+        }
     return 0;
 }
 
-int server_send_shotdown() {
+int server_wait_shotdown_ack(struct message ack) {
+    if (message.clock_lamport == 6) {
+        connfd_p2 = connfd_p1;
+    }
+    else if (message.clock_lamport == 10) {
+        connfd_p2 = connfd_p3;
+    }
+    // Esperamos al ack del cliente
+    if ((recv(connfd_p2, &ack, sizeof(ack),0)) < 0) 
+    {
+        printf("Recv from the client failed...\n");
+    } else {
+        //Esperamos el shotdown ack
+        if(message.action == SHUTDOWN_ACK)
+        {
+            message.clock_lamport = lamport_increase(message); // Actualizamos el reloj de Lamport
+            printf("%s, %d, RECV (%s), SHUTDOWN_ACK\n", message.origin, message.clock_lamport, message.origin);
+        } else {
+            printf("La operación enviada es errónea\n");
+        }
+    }
+    return 0;
 
-    
+}
+
+//Mandar SHOTDOWN_NOW del servidor a los clientes
+int server_send_shotdown(char name[2]) {
+    struct message ack;
+
+    //QUe cliente es el que manda el mensaje
+    strcpy(ack.origin, message.origin); 
+    // Actualizamos lamport
+    message.clock_lamport++; 
+    ack.clock_lamport = message.clock_lamport;
+    // Enviamos el SHOTDOWN_NOW
+    ack.action = SHUTDOWN_NOW; 
+
+    printf("%s, %d, SEND, SHUTDOWN_NOW (%s)\n",ack.origin, ack.clock_lamport, name);
+
+    if (ack.clock_lamport == 4) {
+        connfd_p2 = connfd_p1;
+    } 
+    else if (ack.clock_lamport == 8) {
+        connfd_p2 = connfd_p3;
+    }
+    if (send(connfd_p2, &ack,sizeof(ack), 0) < 0)
+    {
+        printf("Send to the client failed...\n");
+    }
+    server_wait_shotdown_ack(ack);
 }
 
 
-
+//Conexiones para unir el servidor con el cliente
 int client_connection() {
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if(sockfd == -1) {
@@ -149,4 +225,71 @@ int server_connection(){
         printf("Server listening...\n");
     }
     return 0;
+}
+
+void *client_wait_message() {
+
+    while(1)
+    {
+        struct message shutdown;
+        int n;
+        usleep(500000);
+        if ((n = recv(sockfd, &shutdown, sizeof(shutdown),MSG_DONTWAIT)) > 0)
+        {
+        if(shutdown.action == SHUTDOWN_NOW) 
+        {
+            shutdown.clock_lamport = lamport_increase(message);
+            printf("%s, %d, RECV (%s), SHUTDOWN_NOW\n", message.origin, shutdown.clock_lamport, shutdown.origin);
+        } else {
+            printf("Wrong operation\n");
+        }
+        }
+    }
+
+}
+
+void init_recv_thread () {
+    pthread_create(&thread, NULL, client_wait_message, NULL);
+}
+
+
+//Cerramos conexiones 
+
+int close_server() {
+
+    if(close(connfd_p2) == -1)
+    {
+        printf("Close failed\n");
+        exit(1);
+    }
+    if(close(sockfd) == 1)
+    {
+        printf("Close failed\n");
+        exit(1);
+    }
+  return 0;
+}
+
+int close_clients(){
+
+    if(pthread_join(thread, NULL) != 0)
+    {
+      printf("join failed\n");
+      exit(1);
+    }
+
+
+    if(close(connfd_p2) == -1)
+    {
+        printf("Close failed\n");
+        exit(1);
+    }
+    if(close(sockfd) == 1)
+    {
+        printf("Close failed\n");
+        exit(1);
+    }
+  return 0;
+
+
 }

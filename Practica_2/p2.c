@@ -22,7 +22,15 @@ int main(int argc, char *argv[])
     wait_client_shotdown();
     wait_client_shotdown();
 
+    //Mandamos el shotdown now primero a p1 y luego p3
 
+    server_send_shotdown("p1");
+    server_send_shotdown("p3");
+
+    printf("Clientes fueron correctamente apagados en t(lamport) = %d\n", get_clock_lamport());
+    //Una vez que ya hemos terminado todo cerramos las conexiones
+    sleep(2);
+    close_server();
     return 0;
     
 }

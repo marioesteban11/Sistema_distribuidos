@@ -19,5 +19,21 @@ int main(int argc, char *argv[])
 
     //Conectamos con el server
     client_connection();
+
+    //Inicializamos el thread para recibir mensajes
+    init_recv_thread();
+
+    notify_ready_shutdown();
+
+    while(get_clock_lamport() < 5) {
+        usleep(100);
+    }
+    notify_shutdown_ack();
+    printf("SHOTDOWN\n");
+
+    sleep(1);
+
+    close_clients();
+
     return 0;
 }

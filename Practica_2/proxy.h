@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/select.h>
+#include <pthread.h>
 
 
 enum operations {
@@ -43,4 +44,13 @@ int client_connection();
 
 int server_connection();
 
+int wait_client_shotdown();
+
+void init_recv_thread();
+
+int close_clients();
+
+int close_server();
+
+int server_send_shotdown(char nombre[2]);
 int wait_client_shotdown();
