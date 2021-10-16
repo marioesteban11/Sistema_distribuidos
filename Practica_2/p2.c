@@ -8,8 +8,6 @@
 
 #include "proxy.h"
 
-#define MAX 256
-#define PORT 8080
 
 int main(int argc, char *argv[])
 {
@@ -23,7 +21,6 @@ int main(int argc, char *argv[])
     wait_client_shotdown();
 
     //Mandamos el shotdown now primero a p1 y luego p3
-
     server_send_shotdown("p1");
     server_send_shotdown("p3");
 

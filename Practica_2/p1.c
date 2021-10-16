@@ -8,8 +8,6 @@
 
 #include "proxy.h"
 
-#define MAX 256
-#define PORT 8080
 
 
 int main(int argc, char *argv[])
@@ -24,9 +22,9 @@ int main(int argc, char *argv[])
     init_recv_thread();
 
     notify_ready_shutdown();
-
+    //Esperamos a que el reloj de lamport llegue al numero correcto
     while(get_clock_lamport() < 5) {
-        usleep(100);
+        usleep(10000);
     }
     notify_shutdown_ack();
     printf("SHOTDOWN\n");

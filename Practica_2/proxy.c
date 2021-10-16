@@ -12,7 +12,6 @@ pthread_t thread;
 // Actualizamos el reloj de lamport
 unsigned int lamport_increase(struct message lamport) {
     unsigned int number_lamport;
-
     if (lamport.clock_lamport < message.clock_lamport) {
         number_lamport = message.clock_lamport;
     }else {
@@ -49,7 +48,6 @@ int get_clock_lamport(){
 // Notifica que está listo para realizar el apagado (READY_TO_SHUTDOWN)
 void notify_ready_shutdown(){
     struct message ready;
-
     // Copiamos el nombre de nuestra maquina para asi poder mandarlo
     strcpy(ready.origin, message.origin); 
     // Cogemos los relojes de lamport oportunos para cada momento
@@ -61,8 +59,7 @@ void notify_ready_shutdown(){
     printf("%s, %d, SEND, READY_TO_SHUTDOWN\n", ready.origin, ready.clock_lamport);
 
         // Enviamos la struct por el socket
-    if (send(sockfd, &ready, sizeof(ready), 0) < 0)
-    {
+    if (send(sockfd, &ready, sizeof(ready), 0) < 0) {
         printf("Send to the server failed...\n");
     }
 
@@ -76,21 +73,18 @@ void notify_shutdown_ack(){
     strcpy(ready.origin, message.origin); 
 
     // Cogemos los relojes de lamport oportunos para cada momento
-
     message.clock_lamport++;
     ready.clock_lamport = message.clock_lamport;
     //Decimos que nuestro pc esta listo para apagarse
-    ready.action = READY_TO_SHUTDOWN;
+    ready.action = SHUTDOWN_ACK;
 
-    printf("%s, %d, SEND, READY_TO_SHUTDOWN\n", ready.origin, ready.clock_lamport);
-
-        // Enviamos la struct por el socket
+    printf("%s, %d, SEND, SHUTDOWN_ACK\n", ready.origin, ready.clock_lamport);
+    // Enviamos la struct por el socket
     if (send(sockfd, &ready, sizeof(ready), 0) < 0)
     {
         printf("Send to the server failed...\n");
     }
 }
-
 
 
 //Recibe el READY_TO_SHOTDOWN de los clientes
@@ -104,28 +98,27 @@ int wait_client_shotdown() {
     } else {
         printf("Server accepts the client...\n");
     }
-    printf("Estamos dentro del receive del server\n");
     // Esperamos a recibir un mensaje
     if ((recv(connfd_p2, &receive, sizeof(receive),0)) < 0) 
     {
         printf("Recv from the client failed...\n");
     }else {
-        
-        if(receive.action == 0) // Comprobamos que el mensaje recibido sea el esperado
-            {
-            receive.clock_lamport = lamport_increase(receive); // Actualizamos el reloj de Lamport
+        // Esperamos Ready_to_shutdown
+        if(receive.action == READY_TO_SHUTDOWN) 
+        {
+            // Reajustamos lamport
+            receive.clock_lamport = lamport_increase(receive); 
             printf("%s, %d, RECV (%s), READY_TO_SHUTDOWN\n", message.origin, receive.clock_lamport, receive.origin);
         } else {
             printf("This is not the correct action\n");
             }   
     }
     //De que cliente es el mensaje 
-    if(message.origin == "p1") {
+    if(strcmp(receive.origin, "p1") == 0 ) {
         connfd_p1 = connfd_p2;
-        }
-    else if(message.origin == "p3") { //message.origin[1] - '0' == 3
+    }else if(strcmp(receive.origin, "p3") == 0 ) { 
         connfd_p3 = connfd_p2;
-        }
+    }
     return 0;
 }
 
@@ -142,16 +135,16 @@ int server_wait_shotdown_ack(struct message ack) {
         printf("Recv from the client failed...\n");
     } else {
         //Esperamos el shotdown ack
-        if(message.action == SHUTDOWN_ACK)
+        if(ack.action == SHUTDOWN_ACK)
         {
-            message.clock_lamport = lamport_increase(message); // Actualizamos el reloj de Lamport
-            printf("%s, %d, RECV (%s), SHUTDOWN_ACK\n", message.origin, message.clock_lamport, message.origin);
-        } else {
-            printf("La operación enviada es errónea\n");
+            //  Reajustamos lamport
+            ack.clock_lamport = lamport_increase(ack); 
+            printf("%s, %d, RECV (%s), SHUTDOWN_ACK\n", message.origin, ack.clock_lamport, ack.origin);
+        }else {
+            printf("Wrong operation\n");
         }
     }
     return 0;
-
 }
 
 //Mandar SHOTDOWN_NOW del servidor a los clientes
@@ -168,13 +161,13 @@ int server_send_shotdown(char name[2]) {
 
     printf("%s, %d, SEND, SHUTDOWN_NOW (%s)\n",ack.origin, ack.clock_lamport, name);
 
-    if (ack.clock_lamport == 4) {
+    if (ack.clock_lamport == 4 ) {
         connfd_p2 = connfd_p1;
     } 
     else if (ack.clock_lamport == 8) {
         connfd_p2 = connfd_p3;
     }
-    if (send(connfd_p2, &ack,sizeof(ack), 0) < 0)
+    if (send(connfd_p2, &ack, sizeof(ack), 0) < 0)
     {
         printf("Send to the client failed...\n");
     }
@@ -184,22 +177,22 @@ int server_send_shotdown(char name[2]) {
 
 //Conexiones para unir el servidor con el cliente
 int client_connection() {
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if(sockfd == -1) {
-      printf("Socket creation failed...\n");
-      exit(1);
-  } else {
-      printf("Socket successfully created...\n");
-  }
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if(sockfd == -1) {
+        printf("Socket creation failed...\n");
+        exit(1);
+    } else {
+        printf("Socket successfully created...\n");
+    }
 
 
-  if((connect(sockfd,(struct sockaddr*)&servaddr,sizeof(servaddr))) < 0){
-      printf("Connection with the server failed...\n");
-      exit(1);
-  } else{
-      printf("Connected to the server...\n");
-  }
-  return 0;
+    if((connect(sockfd,(struct sockaddr*)&servaddr,sizeof(servaddr))) < 0){
+        printf("Connection with the server failed...\n");
+        exit(1);
+    } else{
+        printf("Connected to the server...\n");
+    }
+    return 0;
 }
 
 int server_connection(){
@@ -217,7 +210,6 @@ int server_connection(){
     } else {
         printf("Socket successfully binded...\n");
     }
-    // Ponemos el servidor a escuchar
     if((listen(sockfd, 2)) != 0){
         printf("Listen failed...\n");
         exit(1);
@@ -228,26 +220,24 @@ int server_connection(){
 }
 
 void *client_wait_message() {
-
     while(1)
     {
         struct message shutdown;
-        int n;
         usleep(500000);
-        if ((n = recv(sockfd, &shutdown, sizeof(shutdown),MSG_DONTWAIT)) > 0)
+        if ((recv(sockfd, &shutdown, sizeof(shutdown),MSG_DONTWAIT)) > 0)
         {
-        if(shutdown.action == SHUTDOWN_NOW) 
-        {
-            shutdown.clock_lamport = lamport_increase(message);
-            printf("%s, %d, RECV (%s), SHUTDOWN_NOW\n", message.origin, shutdown.clock_lamport, shutdown.origin);
-        } else {
-            printf("Wrong operation\n");
-        }
+            if(shutdown.action == SHUTDOWN_NOW) 
+            {
+                shutdown.clock_lamport = lamport_increase(shutdown);
+                printf("%s, %d, RECV (%s), SHUTDOWN_NOW\n", message.origin, shutdown.clock_lamport, shutdown.origin);
+            } else {
+                printf("Wrong operation\n");
+            }
         }
     }
 
 }
-
+//Iniciamos el thread para escuchar
 void init_recv_thread () {
     pthread_create(&thread, NULL, client_wait_message, NULL);
 }
@@ -256,6 +246,12 @@ void init_recv_thread () {
 //Cerramos conexiones 
 
 int close_server() {
+
+    if(pthread_join(thread, NULL) != 0)
+    {
+      printf("join failed\n");
+      exit(1);
+    }
 
     if(close(connfd_p2) == -1)
     {
@@ -277,8 +273,6 @@ int close_clients(){
       printf("join failed\n");
       exit(1);
     }
-
-
     if(close(connfd_p2) == -1)
     {
         printf("Close failed\n");
@@ -290,6 +284,4 @@ int close_clients(){
         exit(1);
     }
   return 0;
-
-
 }
