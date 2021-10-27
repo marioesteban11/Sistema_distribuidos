@@ -9,9 +9,10 @@
 #include "proxy.h"
 
 
+
 int main(int argc, char *argv[])
 {
-    set_name("p3");
+    set_name("p1");
     set_ip_port("127.0.0.1", 8000);
 
     //Conectamos con el server
@@ -21,17 +22,15 @@ int main(int argc, char *argv[])
     init_recv_thread();
 
     notify_ready_shutdown();
-    // Esperamos a que el reloj de lamport llegue al numero correcto
-    while(get_clock_lamport() < 9) {
-        usleep(100);
+    //Esperamos a que el reloj de lamport llegue al numero correcto
+    while(get_clock_lamport() < 5) {
+        usleep(10000);
     }
     notify_shutdown_ack();
     printf("SHOTDOWN\n");
 
     sleep(1);
-
     close_clients();
 
     return 0;
-    
 }

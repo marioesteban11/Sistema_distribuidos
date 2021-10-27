@@ -135,8 +135,7 @@ int server_wait_shotdown_ack(struct message ack) {
         printf("Recv from the client failed...\n");
     } else {
         //Esperamos el shotdown ack
-        if(ack.action == SHUTDOWN_ACK)
-        {
+        if(ack.action == SHUTDOWN_ACK) {
             //  Reajustamos lamport
             ack.clock_lamport = lamport_increase(ack); 
             printf("%s, %d, RECV (%s), SHUTDOWN_ACK\n", message.origin, ack.clock_lamport, ack.origin);
@@ -223,17 +222,19 @@ void *client_wait_message() {
     while(1)
     {
         struct message shutdown;
-        usleep(500000);
+        usleep(5000);
         if ((recv(sockfd, &shutdown, sizeof(shutdown),MSG_DONTWAIT)) > 0)
         {
             if(shutdown.action == SHUTDOWN_NOW) 
             {
                 shutdown.clock_lamport = lamport_increase(shutdown);
                 printf("%s, %d, RECV (%s), SHUTDOWN_NOW\n", message.origin, shutdown.clock_lamport, shutdown.origin);
+                break;
             } else {
                 printf("Wrong operation\n");
             }
         }
+
     }
 
 }
@@ -246,13 +247,6 @@ void init_recv_thread () {
 //Cerramos conexiones 
 
 int close_server() {
-
-    if(pthread_join(thread, NULL) != 0)
-    {
-      printf("join failed\n");
-      exit(1);
-    }
-
     if(close(connfd_p2) == -1)
     {
         printf("Close failed\n");
@@ -283,5 +277,6 @@ int close_clients(){
         printf("Close failed\n");
         exit(1);
     }
-  return 0;
+    printf("llegas");
+    return 0;
 }
