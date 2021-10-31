@@ -40,9 +40,8 @@ int ratio_counter = 0;
 FILE* file;
 
 //Funciones cliente
-
-int client_conection(char* ip, int port)
-{
+//conectamos el servidor y el cliente
+int client_conection(char* ip, int port) {
     // Creamos un socket TCP y comprobamos que se ha creado correctamente
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1) {
@@ -58,7 +57,6 @@ int client_conection(char* ip, int port)
     servaddr.sin_addr.s_addr = inet_addr(ip);
     servaddr.sin_port = htons(port);
 
-
     // Conectamos el cliente al socket del servidor y comprobamos
     if ((connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr))) < 0) {
         printf("Connection with the server failed...\n");
@@ -70,26 +68,7 @@ int client_conection(char* ip, int port)
     return 0;
 }
 
-
-//Mirar si el cliente es escritor o lector
-int set_client(char *cliente)
-{
-    int opcion = -1;
-    if(strcmp(cliente, "reader") == 0) //Si el argumento es writer será un escritor
-    {
-        opcion = READ;
-    }else if (strcmp(cliente, "writer") == 0)
-    {
-        opcion = WRITE;
-    }else{
-        printf("La opción elegida no es la correcta\n");
-    }
-    return opcion;
-}
-
-
-void *thread_lector(void *arg)
-{
+void *thread_lector(void *arg) {
     //printf("estamos en thread_lector\n");
     struct request request;
     request.action = READ;
@@ -103,10 +82,8 @@ void *thread_lector(void *arg)
     }
     //printf("antes del recv \n");
     //Recibimos los datos que nos devulve el servidor
-    if ((n = recv(sockfd, &response, sizeof(response), 0)) > 0) 
-    {   
-        if(response.action == READ)
-        {
+    if ((n = recv(sockfd, &response, sizeof(response), 0)) > 0) {   
+        if(response.action == READ) {
             
             //print de numero del hilo, contador del .txt y tiempo de respuesta
             printf("Cliente #%d Lector, contador = %d, tiempo = %ld ns.\n", *(int *)arg, response.counter, response.waiting_time);
@@ -116,14 +93,12 @@ void *thread_lector(void *arg)
     }
 }
 
-void *thread_escritor(void *arg)
-{
+void *thread_escritor(void *arg) {
     struct request request;
     request.action = WRITE;
     //Enviamos enviamos al servidor la estructura del mensaje
     
-    if (send(sockfd, &request, sizeof(request), 0) < 0)
-    {
+    if (send(sockfd, &request, sizeof(request), 0) < 0) {
         printf("Send to the server failed...\n");
     }
 
@@ -131,10 +106,8 @@ void *thread_escritor(void *arg)
     int n;
     //Recibimos los datos que nos devulve el servidor
     
-    if ((n = recv(sockfd, &message, sizeof(message), 0)) > 0)
-    {   
-        if(message.action == WRITE)
-        {
+    if ((n = recv(sockfd, &message, sizeof(message), 0)) > 0) {   
+        if(message.action == WRITE) {
             //print de numero del hilo, contador del .txt y tiempo de respuesta
             printf("Cliente #%d Escritor, contador = %d, tiempo = %ld ns.\n", *(int *)arg, message.counter, message.waiting_time);
         }
@@ -143,81 +116,74 @@ void *thread_escritor(void *arg)
     }
 }
 
-void set_reader_or_client(char* threads, int opcion)
-{
+void set_reader_or_client(int threads, int opcion) {
     struct num_threads{
         int threads;
         int opcion;
     }num_clientes;
 
 
-    int hilos = atoi(threads);
-    pthread_t lectores[hilos];
+    //int hilos = atoi(threads);
+    pthread_t lectores[threads];
 
     //Seleccionamos si el parametro es escritor o lector para luego poner crear el thread en correspondencia
-    if (opcion == READ)
-    {
+    if (opcion == READ) {
         num_clientes.opcion = READ;
-    }else if (opcion == WRITE)
-    {
+    }else if (opcion == WRITE) {
         num_clientes.opcion = WRITE;
     }
 
-    num_clientes.threads = hilos;
+    num_clientes.threads = threads;
     
     //printf("numero de clientes %d \n", num_clientes.threads);
     //Lanzo el numero de clientes a procesar
-    if (send(sockfd, &num_clientes, sizeof(num_clientes), 0) < 0) 
-    {
+    if (send(sockfd, &num_clientes, sizeof(num_clientes), 0) < 0) {
         printf("Send to the server failed...\n");
     }
 
     // Generamos un hilo por cada cliente
-    int array_thread[hilos];
+    int array_thread[threads];
 
-    for (int i = 0; i < hilos ; i++)
-    {
+    for (int i = 0; i < threads ; i++) {
         //Hay que opner en un array las posiciones porque si no el thread no lo coge bn
         array_thread[i] = i; 
     }
     
-    for(int i = 0; i < hilos; i++)
-    {   
-        if (num_clientes.opcion == READ)
-        {
+    for(int i = 0; i < threads; i++) {   
+        if (num_clientes.opcion == READ) {
             //printf("seguimos en read\n");
-            if(pthread_create(&lectores[i], NULL, thread_lector, &array_thread[i] ) != 0)
-            {
+            if(pthread_create(&lectores[i], NULL, thread_lector, &array_thread[i] ) != 0) {
 
                 printf("Fallo al ejecutar pthread_create de lectores \n");
                 exit(1);
             }
-        }else if (num_clientes.opcion == WRITE)
-        {
-            if(pthread_create(&lectores[i], NULL, thread_escritor, &array_thread[i] ) != 0)
-            {
+        }else if (num_clientes.opcion == WRITE) {
+            if(pthread_create(&lectores[i], NULL, thread_escritor, &array_thread[i] ) != 0) {
                 printf("Fallo al ejecutar pthread_create de escritores \n");
                 exit(1);
             }
         }
-        
     }
-    for(int i = 0; i < hilos; i++)
-    {
-        if(pthread_join(lectores[i], NULL) != 0)
-        {
+    for(int i = 0; i < threads; i++) {
+        if(pthread_join(lectores[i], NULL) != 0) {
             printf("Fallo al ejecutar pthread_join...\n");
             exit(1);
         }
     }
+
 }
 
-
+int close_client() {
+    if(close(sockfd) == 1) {
+        printf("Close failed\n");
+        exit(1);
+    }
+    return 0;
+}
 //funciones servidor
 
 // Iniciamos todos los semaforos que vamos a utilizar a continuación
-void semaforo()
-{
+void semaforo() {
     sem_init(&sem_mutex, 0, 1);
     sem_init(&sem_numero_clientes, 0, 1);
 
@@ -236,9 +202,8 @@ void semaforo()
     sem_init(&sem_ratio_counter,0,1);
 }
 
-
-int server_conection(char* ip, int port)
-{
+//conectamos el servidor y el cliente
+int server_conection(char* ip, int port) {
     // Creamos un socket TCP y comprobamos que se ha creado correctamente
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1) {
@@ -271,13 +236,13 @@ int server_conection(char* ip, int port)
 
 
 
-int aceptar_cliente()
-{
+int aceptar_cliente() {
 
     struct num_threads{
         int threads;
         int opcion;
     }num_clientes;
+
     connfd = accept(sockfd, (struct sockaddr*)NULL, NULL); //Acepta un nuevo cliente
     if (connfd < 0){
         printf("Server accept failed...\n");
@@ -288,7 +253,6 @@ int aceptar_cliente()
 
     int n;
     
-
     //Recibe WRITE o READ y el numero de clientes que hay
     if ((n = recv(connfd, &num_clientes, sizeof(num_clientes), 0)) < 0) 
     {
@@ -296,22 +260,18 @@ int aceptar_cliente()
     }
     
     //Tenemos si los clientes a tratar son lectores o escritores
-    if(num_clientes.opcion == WRITE) 
-    {
+    if(num_clientes.opcion == WRITE) {
         sem_wait(&sem_cliente_escritor);
         connfd_writers = connfd;
     }
-    else if(num_clientes.opcion == READ) 
-    {
+    else if(num_clientes.opcion == READ) {
         sem_wait(&sem_cliente_lector);
         connfd_readers = connfd;
     }
-
     return num_clientes.threads;
 }
 
-void *escritores_prio_escritor(void *arg)
-{
+void *escritores_prio_escritor(void *arg) {
     
     struct response response;
     struct timespec begin, end;
@@ -325,8 +285,7 @@ void *escritores_prio_escritor(void *arg)
     sem_wait(&sem_mutex);
     clock_gettime(CLOCK_MONOTONIC, &end);
 
-    if(numero_lectores > 0 || writing)
-    {
+    if(numero_lectores > 0 || writing) {
         numero_escritores++;
         sem_post(&sem_mutex);
         sem_wait(&sem_escritores);
@@ -351,8 +310,7 @@ void *escritores_prio_escritor(void *arg)
 
     usleep(50000);
 
-    if (send(connfd_writers, &response, sizeof(response), 0) < 0)
-    {
+    if (send(connfd_writers, &response, sizeof(response), 0) < 0){
         printf("Send to the server failed...\n");
     }
     //FIN SECCIÓN CRÍTICA
@@ -655,3 +613,11 @@ void *escritores_prio_lector(void *arg)
 
 }
 
+int close_server() {
+    if(close(sockfd) == 1)
+    {
+        printf("Close failed\n");
+        exit(1);
+    }
+  return 0;
+}

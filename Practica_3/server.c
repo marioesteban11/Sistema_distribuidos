@@ -9,33 +9,49 @@
 #include <pthread.h>
 
 #include "proxy.h"
-
+#include <getopt.h>
 int main(int argc, char *argv[])
-{
+{   
+    char *priority = NULL; 
+    int opcion;
+    int option_index = 0;
+    int ratio = 0, port_number = 0;
+
+    static struct option long_options[] = {
+             {"port ", required_argument, 0, 'p'},
+             {"priority ", required_argument, 0, 't'},
+             {"ratio ", required_argument, 0, 'r' },
+             {0, 0, 0, 0}
+         };
+
+    while ((opcion =  getopt_long (argc, argv, "p:t:r::",long_options, &option_index)) != -1){
+        
+        switch (opcion)
+        {
+            //ratio
+        case 'r':
+            ratio = strtol(optarg, NULL, 10);
+            break;
+            //priority
+        case 't':
+            priority = optarg;
+            break;
+            //port
+        case 'p':
+            port_number = strtol(optarg, NULL, 10);
+            break;
+        default:
+            break;
+        }
+    }
+    printf("las opciones elegidas para este programa son: priority: %s, port: %d y ratio: %d\n", priority, port_number, ratio);
     FILE* file;
 
-
-    if (argc != 3)
-    {
-        printf("Introduzca el numero correcto de argumentos\n");
-        return -1;
-    }
-
-    if (strcmp(argv[1], "--priority") == 0)
-    {
-        server_conection("127.0.0.1", 8000);
-    }
+    server_conection("127.0.0.1", port_number);
 
     //Creamos el fichero
     file = fopen("server_output.txt", "w"); 
 
-    // SI existe el parametro ratio
-
-    int ratio = 0;
-    if(argc == 5)
-    {
-        ratio = atoi(argv[4]);
-    }
     //Inicializamos todos los semaforos
     semaforo();
     while (1)
@@ -44,19 +60,21 @@ int main(int argc, char *argv[])
         printf("Ratio%d\n", ratio);
         //printf("Numero threads%s\n\n\n", argv[2]);
         
-        if(strcmp(argv[2], "writer") == 0)
+        if(strcmp(priority, "writer") == 0)
         {
+            //printf("pantuflas\n");
             //Si nos pasan clientes como prioridad
-            seleccionar_prioridad(clients, ratio, argv[2]); 
+            seleccionar_prioridad(clients, ratio, priority); 
             
         }
-        else if(strcmp(argv[2], "reader") == 0)
+        else if(strcmp(priority, "reader") == 0)
         {
             //Si nos pasan clientes como prioridad
-            seleccionar_prioridad(clients, ratio, argv[2]); 
+            seleccionar_prioridad(clients, ratio, priority); 
         }
     }
     fclose(file);
-    
+
+    close_server();
     return 0;
 }

@@ -36,7 +36,7 @@ int set_client(char* cliente);
 //Inicializa el cliente en un ip y con un puerto determinado
 int client_conection(char* ip, int port);
 //Indica al servidor que lo mandado son clientes
-void set_reader_or_client(char* threads, int opcion);
+void set_reader_or_client(int threads, int opcion);
 //Thread de lectores
 void *thread_lector(void *arg);
 //Thread de escritores
@@ -54,3 +54,6 @@ void *escritores_prio_escritor(void *arg);
 void *lectores_prio_escritor(void *arg);
 void *escritores_prio_lector(void *arg);
 void *lectores_prio_lector(void *arg);
+
+int close_server();
+int close_client();

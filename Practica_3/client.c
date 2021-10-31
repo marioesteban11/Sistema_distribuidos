@@ -11,30 +11,6 @@
 
 int main(int argc, char *argv[])
 {
-    // Miramos si se pasa como argumento un lector o un escritor
-    // y miramos el numero de threads/clientes que van a ser ejecutados
-    //if (argc < 4)
-    //{
-    //    printf("Introduzca el numero correcto de argumentos");
-    //    return -1;
-    //}
-    //client_conection("127.0.0.1", 8000);
-//
-    //semaforo();
-    //if (strcmp(argv[1], "--mode") == 0 && strcmp(argv[3], "--threads") == 0)
-    //{
-    //    if(set_client(argv[2]) == WRITE){
-    //        printf("writer yes papa\n");
-    //        
-    //        set_reader_or_client(argv[4], WRITE);
-    //    }
-    //    else if (set_client(argv[2]) == READ){
-//
-    //        printf("reader yes papa\n");
-    //        set_reader_or_client(argv[4], READ);
-    //    }
-    //}
-
     char *mode = NULL, *ip = NULL; 
     int opcion;
     int option_index = 0;
@@ -73,6 +49,23 @@ int main(int argc, char *argv[])
         }
     }
     printf("Esto es el modo en el que estamos:  %s  y esto es el numero de threads: %d, esto el ip; %s, y esto el puerto: %d \n", mode, threads, ip, port_number);
+
+
+    // Miramos si se pasa como argumento un lector o un escritor
+    // y miramos el numero de threads/clientes que van a ser ejecutados
+    client_conection(ip, port_number);
+
+    //semaforo();
+
+    if(strcmp(mode, "writer") == 0) {
+        printf("pantuflas\n");
+        set_reader_or_client(threads, WRITE);
+    }
+    else if (strcmp(mode, "reader") == 0){
+        set_reader_or_client(threads, READ);
+    }
+
+    close_client();
 
     return 0;
 }
