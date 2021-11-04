@@ -57,12 +57,12 @@ int main(int argc, char *argv[])
     while (1)
     {
         int clients = aceptar_cliente();
-        printf("Ratio%d\n", ratio);
+        //printf("Ratio%d\n", ratio);
         //printf("Numero threads%s\n\n\n", argv[2]);
         
         if(strcmp(priority, "writer") == 0)
         {
-            //printf("pantuflas\n");
+            //printf("albaricoque\n");
             //Si nos pasan clientes como prioridad
             seleccionar_prioridad(clients, ratio, priority); 
             
