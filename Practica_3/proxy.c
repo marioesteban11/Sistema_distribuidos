@@ -284,19 +284,21 @@ void *escritores_prio_escritor(void *arg) {
     num_clientes_escritores++;
     sem_post(&sem_numero_escritores);
 
-
+    
     clock_gettime(CLOCK_MONOTONIC, &begin);
+    printf("ADIOS PESCODON\n");
     sem_wait(&sem_mutex);
     clock_gettime(CLOCK_MONOTONIC, &end);
-    printf("pruebas if debajo: numero escritores: %d, flag writting %d\n", numero_escritores, writing);
+    //printf("pruebas if debajo: numero escritores: %d, flag writting %d\n", numero_escritores, writing);
     if(numero_lectores > 0 || writing) {
         numero_escritores++;
         sem_post(&sem_mutex);
         sem_wait(&sem_escritores);
         numero_escritores--;
     }
-    sem_post(&sem_mutex);
     writing = 1;
+    sem_post(&sem_mutex);
+    
     
 
     //INICIO SECCIÓN CRÍTICA
@@ -323,6 +325,7 @@ void *escritores_prio_escritor(void *arg) {
 
     sem_wait(&sem_mutex);
     writing = 0;
+
     if(numero_escritores > 0) {
         sem_wait(&sem_ratio_counter);
         ratio_counter++;
@@ -359,25 +362,26 @@ void *lectores_prio_escritor(void *arg)
     num_clientes_lectores++;
     sem_post(&sem_numero_lectores);
     
-
+    
     sem_wait(&sem_maximos_lectores);
     clock_gettime(CLOCK_MONOTONIC, &begin);
     
     sem_wait(&sem_mutex);
     clock_gettime(CLOCK_MONOTONIC, &end);
-    printf("pruebas if debajo: numero escritores: %d, flag writting %d\n", numero_escritores, writing);
+    printf("hola pesicola\n");
+    //printf("pruebas if debajo: numero escritores: %d, flag writting %d\n", numero_escritores, writing);
     if(numero_escritores || writing) {
         num_lectores_bloqueados++;
         sem_post(&sem_mutex);
         sem_wait(&sem_lectores);
         num_lectores_bloqueados--;
-        printf("patata\n");
     }
     
     numero_lectores++;
     if(num_lectores_bloqueados > 0) {
         sem_post(&sem_lectores);
     }else {
+        
         sem_post(&sem_mutex);
     }
     
@@ -406,10 +410,10 @@ void *lectores_prio_escritor(void *arg)
     numero_lectores--;
     if(numero_lectores == 0 && numero_escritores == 0) {
         sem_post(&sem_escritores);
-    }else{
+    }//else {
+    //    printf("SEM_POST\n\n\n\n");
         sem_post(&sem_mutex);
-    }
-
+    //}
 
     if(numero_lectores < 50) {
         sem_post(&sem_maximos_lectores);
@@ -417,7 +421,7 @@ void *lectores_prio_escritor(void *arg)
 
     sem_wait(&sem_numero_lectores);
     num_clientes_lectores--;
-    if(num_clientes_lectores == 0){
+    if(num_clientes_lectores == 0) {
         sem_post(&sem_cliente_lector);
     }
     sem_post(&sem_numero_lectores);
@@ -489,7 +493,6 @@ void *lectores_prio_lector(void *arg)
     ratio_counter++;
 
     clock_gettime(CLOCK_MONOTONIC, &begin);
-    printf("NUMERO DE LECTORES PARA EL MUTEX: %d\n\n\n", numero_lectores);
     if(numero_lectores == 1) {
         //sem_wait(&sem_mutex);
         sem_wait(&sem_prio_lect);
