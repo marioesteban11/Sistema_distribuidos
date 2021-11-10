@@ -267,15 +267,15 @@ int aceptar_cliente() {
 }
 
 void *escritores_prio_escritor(void *arg) {
-    
     struct response response;
 
     sem_wait(&sem_numero_escritores);
     num_clientes_escritores++;
     sem_post(&sem_numero_escritores);
 
-
+   
     sem_wait(&sem_mutex);
+    
     //printf("pruebas if debajo: numero escritores: %d, flag writting %d\n", numero_escritores, writing);
     if(numero_lectores > 0 || writing) {
         numero_escritores++;
@@ -283,6 +283,7 @@ void *escritores_prio_escritor(void *arg) {
         sem_wait(&sem_escritores);
         numero_escritores--;
     }
+    
     writing = 1;
     sem_post(&sem_mutex);
 
@@ -310,13 +311,12 @@ void *escritores_prio_escritor(void *arg) {
 
     sem_wait(&sem_mutex);
     writing = 0;
-
+    //printf("El ratio es: %d\n\n\n", ratio_exist);
     if(numero_escritores > 0) {
         sem_wait(&sem_ratio_counter);
         ratio_counter++;
         if(ratio_exist && ratio_counter % *(int*)arg  == 0 && num_clientes_lectores != 0) {
             block_ratio = 1;
-            //printf("holaaaaaaaaaaaaaaa\n\n\n");
             sem_post(&sem_lectores);
             sem_wait(&sem_ratio);
         }
@@ -346,15 +346,16 @@ void *lectores_prio_escritor(void *arg)
     num_clientes_lectores++;
     sem_post(&sem_numero_lectores);
     sem_wait(&sem_maximos_lectores);
+    
     sem_wait(&sem_mutex);
-
+    
     if(numero_escritores || writing) {
         num_lectores_bloqueados++;
         sem_post(&sem_mutex);
         sem_wait(&sem_lectores);
         num_lectores_bloqueados--;
     }
-    
+    //printf("ACA MUERE EL LECTOOOOOR \n\n\n\n");
     numero_lectores++;
     if(num_lectores_bloqueados > 0) {
         sem_post(&sem_lectores);
@@ -380,14 +381,15 @@ void *lectores_prio_escritor(void *arg)
     //FIN SECCIÓN CRÍTICA
 
     if (block_ratio) {
-        printf("holaaaaaaaaaaaaaa\n\n\n");
         block_ratio = 0;
         sem_post(&sem_ratio);
     }
-
+    
     sem_wait(&sem_mutex);
     numero_lectores--;
-    if(numero_lectores == 0 && numero_escritores == 0) {
+
+    //printf("NUMERO LECTORES: %d, NUMERO ESCRITORES: %d\n\n\n", numero_lectores, numero_escritores);
+    if(numero_lectores == 0 && numero_escritores > 0) {
         sem_post(&sem_escritores);
     }
         sem_post(&sem_mutex);
