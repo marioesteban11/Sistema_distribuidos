@@ -3,7 +3,6 @@
 //Variables para el cliente y el servidor
 int sockfd = 0, connfd = 0;
 int connfd_writers = 0, connfd_readers = 0;
-int ratio_number = 0;
 struct sockaddr_in servaddr;
 struct sockaddr_in serv_addr;
 struct response servidor;
@@ -76,14 +75,13 @@ void *thread_lector(void *arg) {
     request.action = READ;
 
     struct response response;
-    int n;
     //Enviamos enviamos al servidor la estructura del mensaje
     if (send(sockfd, &request, sizeof(request), 0) < 0) {
         printf("Send to the server failed...\n");
     }
     //printf("antes del recv \n");
     //Recibimos los datos que nos devulve el servidor
-    if ((n = recv(sockfd, &response, sizeof(response), 0)) > 0) {   
+    if ((recv(sockfd, &response, sizeof(response), 0)) > 0) {   
         if(response.action == READ) {
             
             //print de numero del hilo, contador del .txt y tiempo de respuesta
@@ -104,10 +102,9 @@ void *thread_escritor(void *arg) {
     }
 
     struct response message;
-    int n;
     //Recibimos los datos que nos devulve el servidor
     
-    if ((n = recv(sockfd, &message, sizeof(message), 0)) > 0) {   
+    if ((recv(sockfd, &message, sizeof(message), 0)) > 0) {   
         if(message.action == WRITE) {
             //print de numero del hilo, contador del .txt y tiempo de respuesta
             printf("Cliente #%d Escritor, contador = %d, tiempo = %ld ns.\n", *(int *)arg, message.counter, message.waiting_time);
@@ -188,8 +185,8 @@ void semaforo() {
     sem_init(&sem_mutex, 0, 1);
     sem_init(&sem_numero_clientes, 0, 1);
 
-    sem_init(&sem_maximos_lectores, 0, 100);
-    sem_init(&sem_escritores_max, 0, 150);
+    sem_init(&sem_maximos_lectores, 0, 50);
+    sem_init(&sem_escritores_max, 0, 50);
     
     sem_init(&sem_escritores, 0, 0);
     sem_init(&sem_lectores, 0, 0);
@@ -206,7 +203,7 @@ void semaforo() {
 }
 
 //conectamos el servidor y el cliente
-int server_conection(char* ip, int port) {
+int server_conection(int port) {
     srand (time(NULL));
     // Creamos un socket TCP y comprobamos que se ha creado correctamente
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -219,7 +216,7 @@ int server_conection(char* ip, int port) {
     // Creamos la IP y el puerto
     bzero(&serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = inet_addr(ip);
+    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     serv_addr.sin_port = htons(port);
     // Asignamos la IP creada al socket y comprobamos
     if ((bind(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr))) != 0) {
@@ -228,8 +225,6 @@ int server_conection(char* ip, int port) {
     } else {
         printf("Socket successfully binded...\n");
     }
-    
-    
     if ((listen(sockfd, 100)) != 0) {
             printf("Listen failed...\n");
             exit(1);
@@ -237,8 +232,6 @@ int server_conection(char* ip, int port) {
             printf("Server listening...\n");
         }
 }
-
-
 
 int aceptar_cliente() {
 
@@ -254,11 +247,9 @@ int aceptar_cliente() {
     } else {
         printf("Server accepts the client...\n");
     }
-
-    int n;
     
     //Recibe WRITE o READ y el numero de clientes que hay
-    if ((n = recv(connfd, &num_clientes, sizeof(num_clientes), 0)) < 0) {
+    if ((recv(connfd, &num_clientes, sizeof(num_clientes), 0)) < 0) {
         printf("Recv from the client failed...\n");
     }
     
@@ -278,17 +269,13 @@ int aceptar_cliente() {
 void *escritores_prio_escritor(void *arg) {
     
     struct response response;
-    struct timespec begin, end;
 
     sem_wait(&sem_numero_escritores);
     num_clientes_escritores++;
     sem_post(&sem_numero_escritores);
 
-    
-    clock_gettime(CLOCK_MONOTONIC, &begin);
-    printf("ADIOS PESCODON\n");
+
     sem_wait(&sem_mutex);
-    clock_gettime(CLOCK_MONOTONIC, &end);
     //printf("pruebas if debajo: numero escritores: %d, flag writting %d\n", numero_escritores, writing);
     if(numero_lectores > 0 || writing) {
         numero_escritores++;
@@ -298,8 +285,6 @@ void *escritores_prio_escritor(void *arg) {
     }
     writing = 1;
     sem_post(&sem_mutex);
-    
-    
 
     //INICIO SECCIÓN CRÍTICA
     servidor.counter++;
@@ -314,7 +299,7 @@ void *escritores_prio_escritor(void *arg) {
     response.action = WRITE;
     response.counter = servidor.counter;
     int sleep_number = rand () % 25000 + 75000;
-    response.waiting_time = sleep_number; // end.tv_nsec - begin.tv_nsec;
+    response.waiting_time = sleep_number; 
     
     usleep(sleep_number);
 
@@ -329,7 +314,7 @@ void *escritores_prio_escritor(void *arg) {
     if(numero_escritores > 0) {
         sem_wait(&sem_ratio_counter);
         ratio_counter++;
-        if(ratio_exist && ratio_counter % ratio_number  == 0 && num_clientes_lectores != 0) {// *(int*)arg
+        if(ratio_exist && ratio_counter % *(int*)arg  == 0 && num_clientes_lectores != 0) {
             block_ratio = 1;
             //printf("holaaaaaaaaaaaaaaa\n\n\n");
             sem_post(&sem_lectores);
@@ -356,20 +341,13 @@ void *escritores_prio_escritor(void *arg) {
 void *lectores_prio_escritor(void *arg)
 {
     struct response response;
-    struct timespec begin, end;
     
     sem_wait(&sem_numero_lectores);
     num_clientes_lectores++;
     sem_post(&sem_numero_lectores);
-    
-    
     sem_wait(&sem_maximos_lectores);
-    clock_gettime(CLOCK_MONOTONIC, &begin);
-    
     sem_wait(&sem_mutex);
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    printf("hola pesicola\n");
-    //printf("pruebas if debajo: numero escritores: %d, flag writting %d\n", numero_escritores, writing);
+
     if(numero_escritores || writing) {
         num_lectores_bloqueados++;
         sem_post(&sem_mutex);
@@ -389,7 +367,7 @@ void *lectores_prio_escritor(void *arg)
     response.action = READ;
     response.counter = servidor.counter;
     int sleep_number = rand () % 25000 + 75000;
-    response.waiting_time = sleep_number; //end.tv_nsec - begin.tv_nsec;
+    response.waiting_time = sleep_number;
 
     printf("[Lector #%d] lee contador con valor %d\n", num_clientes_lectores, response.counter);
     
@@ -402,6 +380,7 @@ void *lectores_prio_escritor(void *arg)
     //FIN SECCIÓN CRÍTICA
 
     if (block_ratio) {
+        printf("holaaaaaaaaaaaaaa\n\n\n");
         block_ratio = 0;
         sem_post(&sem_ratio);
     }
@@ -410,10 +389,8 @@ void *lectores_prio_escritor(void *arg)
     numero_lectores--;
     if(numero_lectores == 0 && numero_escritores == 0) {
         sem_post(&sem_escritores);
-    }//else {
-    //    printf("SEM_POST\n\n\n\n");
+    }
         sem_post(&sem_mutex);
-    //}
 
     if(numero_lectores < 50) {
         sem_post(&sem_maximos_lectores);
@@ -433,17 +410,16 @@ void seleccionar_prioridad(int clientes, int ratio, char *prio) {
     pthread_t lector;
 
     struct request request;
-    int n;
 
     if(ratio != 0 ){
         ratio_exist = 1;
-        ratio_number = ratio;
     }
     
     //Se ejecuta hasta que se hayan tratado todos los lectores/escritores
     while(clientes != 0) {
         if (strcmp(prio, "writer") == 0) {
-            if ((n = recv(connfd, &request, sizeof(request),0)) < 0) {//Recibimos la operación a realizar y decidimos que función de thread ejecutamos
+            //Recibimos la operación a realizar y decidimos que función de thread ejecutamos
+            if ((recv(connfd, &request, sizeof(request),0)) < 0) {
                 printf("Recv from the client failed...\n");
             } else {
                 
@@ -455,8 +431,8 @@ void seleccionar_prioridad(int clientes, int ratio, char *prio) {
                 }
             }
         }else if (strcmp(prio, "reader") == 0) {
-            //printf("Entramos en modo mandar mensajes a lectores\n\n\n");
-            if ((n = recv(connfd, &request, sizeof(request),0)) < 0) { //Recibimos la operación a realizar y decidimos que función de thread ejecutamos
+            //Recibimos la operación a realizar y decidimos que función de thread ejecutamos
+            if ((recv(connfd, &request, sizeof(request),0)) < 0) { 
             
                 printf("Recv from the client failed...\n");
             } else {
@@ -473,17 +449,13 @@ void seleccionar_prioridad(int clientes, int ratio, char *prio) {
     }
 }
 
-
-
-void *lectores_prio_lector(void *arg)
-{
+void *lectores_prio_lector(void *arg) {
     //printf("REEEAAAAAD con prioridad \n\n\n");
     sem_wait(&sem_numero_lectores);
     num_clientes_lectores++;
     sem_post(&sem_numero_lectores);
     
     struct response response;
-    struct timespec begin, end;
     
     sem_wait(&sem_maximos_lectores);
     //printf("Lectores por aqui\n");
@@ -492,9 +464,7 @@ void *lectores_prio_lector(void *arg)
     numero_lectores++;
     ratio_counter++;
 
-    clock_gettime(CLOCK_MONOTONIC, &begin);
     if(numero_lectores == 1) {
-        //sem_wait(&sem_mutex);
         sem_wait(&sem_prio_lect);
     }
     if ((ratio_exist && ratio_counter % *(int*) arg == 0) && num_clientes_escritores != 0) {
@@ -503,13 +473,12 @@ void *lectores_prio_lector(void *arg)
         sem_wait(&sem_ratio);
     }
     sem_post(&sem_numero_clientes);
-    clock_gettime(CLOCK_MONOTONIC, &end);
     
     //INICIO SECCIÓN CRÍTICA
     response.action = READ;
     response.counter = servidor.counter;
     int sleep_number = rand () % 25000 + 75000;
-    response.waiting_time = sleep_number; //end.tv_nsec - begin.tv_nsec;
+    response.waiting_time = sleep_number;
     
     printf("[Lector #%d] lee contador con valor %d\n", num_clientes_lectores, response.counter);
     usleep(sleep_number);
@@ -539,11 +508,10 @@ void *lectores_prio_lector(void *arg)
 }
 
 
-void *escritores_prio_lector(void *arg)
-{
+void *escritores_prio_lector(void *arg) {
     //printf("WRITE NO PRIO NUNCAAAAAAAAAA\n\n\n\n");
     struct response response;
-    struct timespec begin, end;
+
     if (numero_lectores == 1){
         sem_wait(&sem_prio_lect);
     }
@@ -553,9 +521,7 @@ void *escritores_prio_lector(void *arg)
     sem_post(&sem_numero_escritores);
 
     sem_wait(&sem_escritores_max);
-    clock_gettime(CLOCK_MONOTONIC, &begin);
     sem_wait(&sem_mutex);
-    clock_gettime(CLOCK_MONOTONIC, &end);
 
     //INICIO SECCIÓN CRÍTICA
     servidor.counter++;
@@ -569,17 +535,14 @@ void *escritores_prio_lector(void *arg)
 
     response.action = WRITE;
     response.counter = servidor.counter;
-    response.waiting_time = end.tv_nsec - begin.tv_nsec;
     int sleep_number = rand () % 25000 + 75000;
-    response.waiting_time = sleep_number;//end.tv_nsec - begin.tv_nsec;
+    response.waiting_time = sleep_number;
     usleep(sleep_number);
 
     if (send(connfd_writers, &response, sizeof(response), 0) < 0) {
         printf("Send to the server failed...\n");
     }
     //FIN SECCIÓN CRÍTICA
-
-
     if(block_ratio) {
         block_ratio = 0;
         sem_post(&sem_ratio);

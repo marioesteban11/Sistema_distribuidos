@@ -46,7 +46,7 @@ void *thread_escritor(void *arg);
 
 //Funciones servidores
 void semaforo();
-int server_conection(char* ip,int port );
+int server_conection(int port );
 
 int aceptar_cliente();
 void seleccionar_prioridad(int clientes, int ratio, char *prio);

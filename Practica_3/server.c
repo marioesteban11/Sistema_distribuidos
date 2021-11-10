@@ -10,8 +10,7 @@
 
 #include "proxy.h"
 #include <getopt.h>
-int main(int argc, char *argv[])
-{   
+int main(int argc, char *argv[]) {   
     char *priority = NULL; 
     int opcion;
     int option_index = 0;
@@ -44,31 +43,25 @@ int main(int argc, char *argv[])
             break;
         }
     }
+    
     printf("las opciones elegidas para este programa son: priority: %s, port: %d y ratio: %d\n", priority, port_number, ratio);
     FILE* file;
 
-    server_conection("127.0.0.1", port_number);
+    server_conection(port_number);
 
     //Creamos el fichero
     file = fopen("server_output.txt", "w"); 
 
     //Inicializamos todos los semaforos
     semaforo();
-    while (1)
-    {
+    while (1) {
         int clients = aceptar_cliente();
-        //printf("Ratio%d\n", ratio);
-        //printf("Numero threads%s\n\n\n", argv[2]);
         
-        if(strcmp(priority, "writer") == 0)
-        {
-            //printf("albaricoque\n");
+        if(strcmp(priority, "writer") == 0) {
             //Si nos pasan clientes como prioridad
             seleccionar_prioridad(clients, ratio, priority); 
-            
         }
-        else if(strcmp(priority, "reader") == 0)
-        {
+        else if(strcmp(priority, "reader") == 0) {
             //Si nos pasan clientes como prioridad
             seleccionar_prioridad(clients, ratio, priority); 
         }
