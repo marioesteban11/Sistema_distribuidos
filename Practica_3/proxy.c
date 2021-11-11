@@ -70,7 +70,6 @@ int client_conection(char* ip, int port) {
 }
 
 void *thread_lector(void *arg) {
-    //printf("estamos en thread_lector\n");
     struct request request;
     request.action = READ;
 
@@ -79,7 +78,6 @@ void *thread_lector(void *arg) {
     if (send(sockfd, &request, sizeof(request), 0) < 0) {
         printf("Send to the server failed...\n");
     }
-    //printf("antes del recv \n");
     //Recibimos los datos que nos devulve el servidor
     if ((recv(sockfd, &response, sizeof(response), 0)) > 0) {   
         if(response.action == READ) {
@@ -133,7 +131,6 @@ void set_reader_or_client(int threads, int opcion) {
 
     num_clientes.threads = threads;
     
-    //printf("numero de clientes %d \n", num_clientes.threads);
     //Lanzo el numero de clientes a procesar
     if (send(sockfd, &num_clientes, sizeof(num_clientes), 0) < 0) {
         printf("Send to the server failed...\n");
@@ -149,7 +146,6 @@ void set_reader_or_client(int threads, int opcion) {
     
     for(int i = 0; i < threads; i++) {   
         if (num_clientes.opcion == READ) {
-            //printf("seguimos en read\n");
             if(pthread_create(&lectores[i], NULL, thread_lector, &array_thread[i] ) != 0) {
 
                 printf("Fallo al ejecutar pthread_create de lectores \n");
@@ -226,11 +222,11 @@ int server_conection(int port) {
         printf("Socket successfully binded...\n");
     }
     if ((listen(sockfd, 100)) != 0) {
-            printf("Listen failed...\n");
-            exit(1);
-        } else {
-            printf("Server listening...\n");
-        }
+        printf("Listen failed...\n");
+        exit(1);
+    } else {
+        printf("Server listening...\n");
+    }
 }
 
 int aceptar_cliente() {
@@ -259,7 +255,6 @@ int aceptar_cliente() {
         connfd_writers = connfd;
     }
     else if(num_clientes.opcion == READ) {
-        printf("entras?\n");
         sem_wait(&sem_cliente_lector);
         connfd_readers = connfd;
     }
@@ -276,7 +271,6 @@ void *escritores_prio_escritor(void *arg) {
    
     sem_wait(&sem_mutex);
     
-    //printf("pruebas if debajo: numero escritores: %d, flag writting %d\n", numero_escritores, writing);
     if(numero_lectores > 0 || writing) {
         numero_escritores++;
         sem_post(&sem_mutex);
@@ -311,7 +305,6 @@ void *escritores_prio_escritor(void *arg) {
 
     sem_wait(&sem_mutex);
     writing = 0;
-    //printf("El ratio es: %d\n\n\n", ratio_exist);
     if(numero_escritores > 0) {
         sem_wait(&sem_ratio_counter);
         ratio_counter++;
@@ -355,7 +348,6 @@ void *lectores_prio_escritor(void *arg)
         sem_wait(&sem_lectores);
         num_lectores_bloqueados--;
     }
-    //printf("ACA MUERE EL LECTOOOOOR \n\n\n\n");
     numero_lectores++;
     if(num_lectores_bloqueados > 0) {
         sem_post(&sem_lectores);
@@ -388,7 +380,6 @@ void *lectores_prio_escritor(void *arg)
     sem_wait(&sem_mutex);
     numero_lectores--;
 
-    //printf("NUMERO LECTORES: %d, NUMERO ESCRITORES: %d\n\n\n", numero_lectores, numero_escritores);
     if(numero_lectores == 0 && numero_escritores > 0) {
         sem_post(&sem_escritores);
     }
@@ -452,7 +443,6 @@ void seleccionar_prioridad(int clientes, int ratio, char *prio) {
 }
 
 void *lectores_prio_lector(void *arg) {
-    //printf("REEEAAAAAD con prioridad \n\n\n");
     sem_wait(&sem_numero_lectores);
     num_clientes_lectores++;
     sem_post(&sem_numero_lectores);
@@ -460,7 +450,6 @@ void *lectores_prio_lector(void *arg) {
     struct response response;
     
     sem_wait(&sem_maximos_lectores);
-    //printf("Lectores por aqui\n");
 
     sem_wait(&sem_numero_clientes);
     numero_lectores++;
@@ -511,7 +500,6 @@ void *lectores_prio_lector(void *arg) {
 
 
 void *escritores_prio_lector(void *arg) {
-    //printf("WRITE NO PRIO NUNCAAAAAAAAAA\n\n\n\n");
     struct response response;
 
     if (numero_lectores == 1){

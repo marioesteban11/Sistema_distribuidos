@@ -11,7 +11,7 @@
 
 int main(int argc, char *argv[])
 {
-    char *mode = NULL, *ip = NULL; 
+    char *mode = "writer", *ip = "127.0.0.1"; 
     int opcion;
     int option_index = 0;
     int threads = 0, port_number = 0;
@@ -39,10 +39,6 @@ int main(int argc, char *argv[])
             port_number = strtol(optarg, NULL, 10);
             break;
         case 'i':
-            if (optarg == "(null)"){
-                printf("Select a ip_port\n");
-                exit(1);
-            }
             ip = optarg;
         default:
             break;
@@ -58,7 +54,6 @@ int main(int argc, char *argv[])
     //semaforo();
 
     if(strcmp(mode, "writer") == 0) {
-        printf("pantuflas\n");
         set_reader_or_client(threads, WRITE);
     }
     else if (strcmp(mode, "reader") == 0){
