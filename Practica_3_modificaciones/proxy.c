@@ -65,7 +65,6 @@ int client_conection(char* ip, int port) {
     } else {
         printf("Socked conected to server  \n");
     }
-
     return 0;
 }
 
@@ -94,7 +93,9 @@ void *thread_escritor(void *arg) {
     struct request request;
     request.action = WRITE;
     //Enviamos enviamos al servidor la estructura del mensaje
-    
+    printf("WAKANDAA\n\n");
+
+
     if (send(sockfd, &request, sizeof(request), 0) < 0) {
         printf("Send to the server failed...\n");
     }
@@ -118,8 +119,6 @@ void set_reader_or_client(int threads, int opcion) {
         int opcion;
     }num_clientes;
 
-
-    //int hilos = atoi(threads);
     pthread_t lectores[threads];
 
     //Seleccionamos si el parametro es escritor o lector para luego poner crear el thread en correspondencia
@@ -135,7 +134,6 @@ void set_reader_or_client(int threads, int opcion) {
     if (send(sockfd, &num_clientes, sizeof(num_clientes), 0) < 0) {
         printf("Send to the server failed...\n");
     }
-
     // Generamos un hilo por cada cliente
     int array_thread[threads];
 
@@ -144,26 +142,43 @@ void set_reader_or_client(int threads, int opcion) {
         array_thread[i] = i; 
     }
     
-    for(int i = 0; i < threads; i++) {   
+    printf("%d\n\n\n", threads);
+    while(threads != 0) {
         if (num_clientes.opcion == READ) {
-            if(pthread_create(&lectores[i], NULL, thread_lector, &array_thread[i] ) != 0) {
-
+            if(pthread_create(&lectores[threads], NULL, thread_lector, &array_thread[threads] ) != 0) {
                 printf("Fallo al ejecutar pthread_create de lectores \n");
                 exit(1);
             }
         }else if (num_clientes.opcion == WRITE) {
-            if(pthread_create(&lectores[i], NULL, thread_escritor, &array_thread[i] ) != 0) {
+            if(pthread_create(&lectores[threads], NULL, thread_escritor, &array_thread[threads] ) != 0) {
                 printf("Fallo al ejecutar pthread_create de escritores \n");
                 exit(1);
             }
         }
+        threads--;
+
     }
-    for(int i = 0; i < threads; i++) {
-        if(pthread_join(lectores[i], NULL) != 0) {
-            printf("Fallo al ejecutar pthread_join...\n");
-            exit(1);
-        }
-    }
+    //for(int i = 0; i < threads; i++) {   
+    //    if (num_clientes.opcion == READ) {
+    //        if(pthread_create(&lectores[i], NULL, thread_lector, &array_thread[i] ) != 0) {
+//
+    //            printf("Fallo al ejecutar pthread_create de lectores \n");
+    //            exit(1);
+    //        }
+    //    }else if (num_clientes.opcion == WRITE) {
+    //        if(pthread_create(&lectores[i], NULL, thread_escritor, &array_thread[i] ) != 0) {
+    //            printf("Fallo al ejecutar pthread_create de escritores \n");
+    //            exit(1);
+    //        }
+    //    }
+    //}
+    
+    //for(int i = 0; i < threads; i++) {
+    //    if(pthread_join(lectores[i], NULL) != 0) {
+    //        printf("Fallo al ejecutar pthread_join...\n");
+    //        exit(1);
+    //    }
+    //}
 
 }
 
@@ -510,7 +525,7 @@ void *escritores_prio_lector(void *arg) {
     num_clientes_escritores++;
     sem_post(&sem_numero_escritores);
 
-    sem_wait(&sem_escritores_max);
+    //sem_wait(&sem_escritores_max);
     sem_wait(&sem_mutex);
 
     //INICIO SECCIÓN CRÍTICA
@@ -538,7 +553,7 @@ void *escritores_prio_lector(void *arg) {
         sem_post(&sem_ratio);
     }
     sem_post(&sem_mutex);
-    sem_post(&sem_escritores_max);
+    //sem_post(&sem_escritores_max);
 
     sem_wait(&sem_numero_escritores);
     num_clientes_escritores--;
