@@ -38,22 +38,15 @@ int main(int argc, char *argv[])
             break;
         }
     }
-    printf("las opciones elegidas para este programa son: priority: %s, port: %d\n", mode, port_number);
 
     server_conection(port_number);
-
+    semaforo();
     while (1) {
         int modo = aceptar_cliente();
-        printf("MODO%d\n\n", modo);
-        if (modo == REGISTER_PUBLISHER){
-            printf("patata\n");
-            conexiones_publicadores();
-        }else if (modo = REGISTER_SUBSCRIBER){
-            printf("albaricoque\n");
-            conexiones_suscriptores();
-        }
-    }
+        //printf("MODO%d\n\n", modo);
 
+    }
+    printf("NANNANANANNANANNNANA");
     close_server();
     return 0;
 }

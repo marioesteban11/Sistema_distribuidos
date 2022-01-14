@@ -147,7 +147,6 @@ void set_reader_or_client(int threads, int opcion) {
     for(int i = 0; i < threads; i++) {   
         if (num_clientes.opcion == READ) {
             if(pthread_create(&lectores[i], NULL, thread_lector, &array_thread[i] ) != 0) {
-
                 printf("Fallo al ejecutar pthread_create de lectores \n");
                 exit(1);
             }

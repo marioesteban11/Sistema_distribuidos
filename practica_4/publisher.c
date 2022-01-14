@@ -42,16 +42,22 @@ int main(int argc, char *argv[])
             break;
         }
     }
-    
-    printf("las opciones elegidas para este programa son: topic: %s, port: %d y ip: %s\n", topic, port_number, ip_port);
-
 
     // Miramos si se pasa como argumento un lector o un escritor
     // y miramos el numero de threads/clientes que van a ser ejecutados
-    client_conection(ip_port, port_number);
-
+    int tipo = 0;
+    client_conection(ip_port, port_number, tipo);
+    // Crear un topic o conectarse a él
     topic_conection(topic);
 
+    //while (1) {
+        // Mandamos un mensaje a traves del topic correspondiente
+        send_message(topic);
+    //    sleep(5);
+    //}
+    
+    // Desconectarse del topic 
+    remove_topic(topic);
     close_client();
 
     return 0;

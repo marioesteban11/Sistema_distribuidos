@@ -42,11 +42,15 @@ int main(int argc, char *argv[])
             break;
         }
     }
-    printf("las opciones elegidas para este programa son: topic: %s, port: %d y ip: %s\n", topic, port_number, ip_port);
-    
-    client_conection(ip_port, port_number);
-
+    int tipo = 1;
+    client_conection(ip_port, port_number, tipo);
+    // suscripcion de un topic al broker
     topic_suscription(topic);
+
+    //sleep(1);
+    // Dexconexion de un topic del browser
+    unfollow_topic(topic);
+
 
     close_client();
     return 0;
