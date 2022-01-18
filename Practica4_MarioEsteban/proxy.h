@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <time.h>
+#include <math.h>
 ////////////////////////////////////////////////////////////////////
 // Estructuras usadas por el publicador y subscrictor
 enum operations {
@@ -48,7 +49,7 @@ struct response {
 /////////////////////////////////////////////////////////////////////
 
 
-int aceptar_cliente();
+int aceptar_cliente(char *mode);
 int server_conection(int port);
 int close_server();
 int conexiones_publicadores();

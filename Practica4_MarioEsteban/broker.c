@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     server_conection(port_number);
     semaforo();
     while (1) {
-        int modo = aceptar_cliente();
+        int modo = aceptar_cliente(mode);
         //printf("MODO%d\n\n", modo);
 
     }

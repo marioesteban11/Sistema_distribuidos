@@ -12,6 +12,7 @@
 
 int main(int argc, char *argv[])
 {
+    srand (time(NULL));
     char *topic = NULL, *ip_port = "127.0.0.1" ; 
     int opcion;
     int option_index = 0;
@@ -46,12 +47,13 @@ int main(int argc, char *argv[])
     client_conection(ip_port, port_number, tipo);
     // suscripcion de un topic al broker
     topic_suscription(topic);
-
-    //sleep(1);
+    //int tiempo = rand() % 1000;
+    //printf("%d\n", tiempo);
+    //usleep(tiempo);
     // Dexconexion de un topic del browser
     unfollow_topic(topic);
 
-
+    //printf("LOLOLOLOLOLOLOLOLO");
     close_client();
     return 0;
 }
