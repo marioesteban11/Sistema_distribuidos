@@ -66,4 +66,4 @@ int send_message(char *topic);
 int close_client();
 
 int topic_suscription(char *topic);
-int unfollow_topic(char *topic, int id_actual);
+int unfollow_topic(char *topic);

@@ -1,3 +1,4 @@
+
 #define _GNU_SOURCE
 
 #include <stdio.h>
@@ -11,7 +12,8 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <time.h>
-#include <math.h>
+
+
 ////////////////////////////////////////////////////////////////////
 // Estructuras usadas por el publicador y subscrictor
 enum operations {
@@ -45,11 +47,10 @@ struct response {
     enum status response_status;
     int id;
 };
-//////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////
 
 
-int aceptar_cliente(char *mode);
+
+int aceptar_cliente();
 int server_conection(int port);
 int close_server();
 int conexiones_publicadores();
@@ -57,13 +58,3 @@ int conexiones_suscriptores();
 int desconexion_publicador();
 int desconexion_suscriptor();
 int publicar_datos();
-void semaforo();
-
-int client_conection(char* ip, int port, int tipo);
-int topic_conection(char *topic);
-int remove_topic(char *topic);
-int send_message(char *topic);
-int close_client();
-
-int topic_suscription(char *topic);
-int unfollow_topic(char *topic, int id_actual);

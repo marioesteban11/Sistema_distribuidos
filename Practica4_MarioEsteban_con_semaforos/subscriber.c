@@ -12,6 +12,7 @@
 
 int main(int argc, char *argv[])
 {
+    srand (time(NULL));
     char *topic = NULL, *ip_port = "127.0.0.1" ; 
     int opcion;
     int option_index = 0;
@@ -42,23 +43,16 @@ int main(int argc, char *argv[])
             break;
         }
     }
-
-    // Miramos si se pasa como argumento un lector o un escritor
-    // y miramos el numero de threads/clientes que van a ser ejecutados
-    int tipo = 0;
+    int tipo = 1;
     client_conection(ip_port, port_number, tipo);
-    // Crear un topic o conectarse a él
-    topic_conection(topic);
+    // suscripcion de un topic al broker
+    topic_suscription(topic);
 
-    while (1) {
-        // Mandamos un mensaje a traves del topic correspondiente
-        send_message(topic);
-        sleep(5);
-    }
-    
-    // Desconectarse del topic 
-    remove_topic(topic);
+
+    // Dexconexion de un topic del browser
+    unfollow_topic(topic);
+
+    //printf("LOLOLOLOLOLOLOLOLO");
     close_client();
-
     return 0;
 }

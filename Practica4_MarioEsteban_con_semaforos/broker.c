@@ -9,50 +9,44 @@
 #include "proxy.h"
 #include <getopt.h>
 
-
 int main(int argc, char *argv[])
 {
-    srand (time(NULL));
-    char *topic = NULL, *ip_port = "127.0.0.1" ; 
+    char *mode = NULL; 
     int opcion;
     int option_index = 0;
     int port_number = 0;
 
     static struct option long_options[] = {
              {"port ", required_argument, 0, 'p'},
-             {"topic ", required_argument, 0, 't'},
-             {"ip ", required_argument, 0, 'i'},
+             {"mode ", required_argument, 0, 'm'},
              {0, 0, 0, 0}
          };
 
-    while ((opcion =  getopt_long (argc, argv, "p:t:i::",long_options, &option_index)) != -1){
+    while ((opcion =  getopt_long (argc, argv, "p:m::",long_options, &option_index)) != -1){
         
         switch (opcion)
         {
             //mode
-        case 't':
-            topic = optarg;
+        case 'm':
+            mode = optarg;
             break;
             //port
         case 'p':
             port_number = strtol(optarg, NULL, 10);
             break;
-        case 'i':
-            ip_port = optarg;
         default:
             break;
         }
     }
-    int tipo = 1;
-    client_conection(ip_port, port_number, tipo);
-    // suscripcion de un topic al broker
-    int id_actual = topic_suscription(topic);
 
+    server_conection(port_number);
+    semaforo();
+    while (1) {
+        int modo = aceptar_cliente(mode);
+        //printf("MODO%d\n\n", modo);
 
-    // Dexconexion de un topic del browser
-    unfollow_topic(topic, id_actual);
-
-    //printf("LOLOLOLOLOLOLOLOLO");
-    close_client();
+    }
+    printf("NANNANANANNANANNNANA");
+    close_server();
     return 0;
 }
