@@ -53,7 +53,7 @@ int aceptar_cliente(char *mode);
 int server_conection(int port);
 int close_server();
 int conexiones_publicadores();
-int conexiones_suscriptores();
+int conexiones_suscriptores(int buen_connfd);
 int desconexion_publicador();
 int desconexion_suscriptor();
 int publicar_datos();

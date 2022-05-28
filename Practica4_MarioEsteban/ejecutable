@@ -1,7 +1,0 @@
-#!/bin/bash
-
-for i in `seq 1 300`; do
-	WAIT= `printf '0.%06d\n' $RANDOM`
-	(sleep $WAIT; echo "Lanzando cliente $i ..."; ./subscriber --ip 127.0.0.1 --port 8080 --topic peras |tee -a data.txt )&
-	echo "Lanzando cliente $i ...";
-done
