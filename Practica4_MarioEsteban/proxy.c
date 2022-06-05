@@ -28,7 +28,7 @@ struct response broker_to_publisher;
 struct response broker_to_suscriber;
 struct message publisher_to_broker;
 struct message suscriber_to_broker;
-struct message someone_to_broker;
+//struct message someone_to_broker;
 
 //// Estructuras del publicador y suscriptor al broker
 struct response response_from_broker;
@@ -52,6 +52,8 @@ pthread_mutex_t sem_desuscripcion;
 pthread_mutex_t sem_bloq_sus;
 pthread_mutex_t sem_pub_bloq;
 pthread_mutex_t sem_set_connfd;
+pthread_mutex_t sem_bloq_pub_paralelo;
+pthread_barrier_t barrier;
 // Funciones broker
 
 void semaforo() {
@@ -65,6 +67,8 @@ void semaforo() {
     pthread_mutex_init(&sem_bloq_sus, NULL);
     pthread_mutex_init(&sem_pub_bloq, NULL);
     pthread_mutex_init(&sem_set_connfd, NULL);
+    pthread_mutex_init(&sem_bloq_pub_paralelo, NULL);
+    
 }
 
 int server_conection(int port) {
@@ -72,7 +76,7 @@ int server_conection(int port) {
     // Creamos un socket TCP y comprobamos que se ha creado correctamente
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1) {
-        fprintf( stderr, "Socket creation failed...\n");
+        printf( "Socket creation failed...\n");
         exit(1);
     }
     // Creamos la IP y el puerto
@@ -82,43 +86,38 @@ int server_conection(int port) {
     serv_addr.sin_port = htons(port);
     // Asignamos la IP creada al socket y comprobamos
     if ((bind(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr))) != 0) {
-        fprintf( stderr, "Socket bind failed...\n");
+        printf( "Socket bind failed...\n");
         exit(1);
     } 
     if ((listen(sockfd, 500)) != 0) {
-        fprintf( stderr, "Listen failed...\n");
+        printf( "Listen failed...\n");
         exit(1);
     }
 }
 
 void *thread_clientes(void *arg) {
     int id;
+    struct message someone_to_broker;
     while(1){
         id = *(int*)arg;
-        //pthread_mutex_lock(&sem_pub_bloq);
-        
         if ((recv(id, &someone_to_broker, sizeof(someone_to_broker), 0)) < 0) {
-            fprintf( stderr, "Recv from the client failed...\n");
+            printf( "Recv from the client failed...\n");
         }
-        //fprintf(stderr, "Clientes aceptados: %d\n", id);
-        //fprintf(stderr, "EL DESPUES con someone to borker. action %d\n", someone_to_broker.action);
+        
+        //fprintf(stderr, "EL coon someone to borker. action %d e id: %d\n", someone_to_broker.action, id);
         if (someone_to_broker.action == REGISTER_PUBLISHER){
-            conexiones_publicadores();
+            conexiones_publicadores(someone_to_broker);
         }else if (someone_to_broker.action == REGISTER_SUBSCRIBER ){
-            conexiones_suscriptores(id);
+            conexiones_suscriptores(id, someone_to_broker);
         }else if (someone_to_broker.action == UNREGISTER_PUBLISHER){
-            desconexion_publicador();
+            desconexion_publicador(someone_to_broker);
             break;
         }else if (someone_to_broker.action == UNREGISTER_SUBSCRIBER){
-            desconexion_suscriptor();
-            if (strcmp(modelo_algoritmo, "secuencial") == 0){
-                pthread_mutex_unlock(&sem_bloq_sus);
-            }
+            desconexion_suscriptor(id, someone_to_broker);
             break;
         }else if (someone_to_broker.action == PUBLISH_DATA){
-            publicar_datos();
-        } 
-        //pthread_mutex_unlock(&sem_pub_bloq);
+            publicar_datos(someone_to_broker);
+        }
     }
 }
 
@@ -139,18 +138,19 @@ int aceptar_cliente(char *mode) {
     }
 
     while(1){
+        pthread_mutex_lock(&sem_set_connfd);
         connfd = accept(sockfd, (struct sockaddr*)NULL, NULL); //Acepta un nuevo cliente
         
         if (connfd < 0) {
-            fprintf( stderr, "Server accept failed...\n");
+            printf( "Server accept failed...\n");
             exit(1);
         }
         // AQUI LLEGA EL PRIMER mensaje que es decir si lo que recibe lo manda un publicador o un suscriptor
         if ((recv(connfd, &recibir, sizeof(recibir), 0)) < 0) {
-            fprintf( stderr, "Recv from the client failed...\n");
+            printf( "Recv from the client failed...\n");
         }
         
-        pthread_mutex_lock(&sem_set_connfd);
+        
         if (recibir.cliente == 0) {
             connfd_publisher = connfd;
             lista_connfd_globales[clientes_acumulados] = connfd_publisher;
@@ -160,33 +160,33 @@ int aceptar_cliente(char *mode) {
             
         }
         
-        if(strcmp(modelo_algoritmo, "paralelo") == 0) {
-            fprintf(stderr, "%s\n", modelo_algoritmo);
-            
-        }else if (strcmp(modelo_algoritmo, "secuencial") == 0) {
-            strcpy(modelo_algoritmo, mode);
-            
-            if(pthread_create(&clientes[threads_aum], NULL, thread_clientes, (void *) &lista_connfd_globales[clientes_acumulados] ) != 0) {
-                fprintf( stderr, "Fallo al ejecutar pthread_create de clientes \n");
-                exit(1);
-            }
-            //if(pthread_join(clientes[threads_aum], NULL) != 0){
-            //    fprintf( stderr, "Fallo al ejecutar pthread_join de clientes \n");
-            //    exit(1);
-            //}
-        }else if (strcmp(modelo_algoritmo, "justo") == 0) {
-            fprintf(stderr, "%s\n", modelo_algoritmo);
-        }
+        //if(strcmp(modelo_algoritmo, "paralelo") == 0) {
+        //    fprintf(stderr, "%s\n", modelo_algoritmo);
+        //    
+        //}else if (strcmp(modelo_algoritmo, "secuencial") == 0) {
+        //    if(pthread_create(&clientes[threads_aum], NULL, thread_clientes, (void *) &lista_connfd_globales[clientes_acumulados] ) != 0) {
+        //        printf( "Fallo al ejecutar pthread_create de clientes \n");
+        //        exit(1);
+        //    }
+        //}else if (strcmp(modelo_algoritmo, "justo") == 0) {
+        //    fprintf(stderr, "%s\n", modelo_algoritmo);
+        //}
         
+        if(pthread_create(&clientes[threads_aum], NULL, thread_clientes, (void *) &lista_connfd_globales[clientes_acumulados] ) != 0) {
+            printf( "Fallo al ejecutar pthread_create de clientes \n");
+            exit(1);
+        }
+
+
         threads_aum++;
         clientes_acumulados++;
         pthread_mutex_unlock(&sem_set_connfd);
 
     }
-    return someone_to_broker.action;
+    return 0;
 }
 
-int conexiones_publicadores(){ 
+int conexiones_publicadores(struct message someone_to_broker){ 
 
     int aumento = 0;
     strcpy(publisher_to_broker.topic, someone_to_broker.topic);
@@ -209,9 +209,9 @@ int conexiones_publicadores(){
     }
     if (aumento == 1) {
         clock_gettime(CLOCK_MONOTONIC, &broker);
-        fprintf( stderr, "[%ld] Nuevo cliente ( %d) Publicador conectado : %s\n ", broker.tv_nsec, connfd_publisher,  publisher_to_broker.topic);
+        printf( "[%ld] Nuevo cliente ( %d) Publicador conectado : %s\n ", broker.tv_nsec, connfd_publisher,  publisher_to_broker.topic);
         for (int i = 0; i < limite_topics; i++){
-            fprintf( stderr, " %s: 1 Publicador - %d Suscriptores\n", topic_list[i], numero_suscriptores);
+            printf( " %s: %d Publicador - %d Suscriptores\n", topic_list[i],limite_topics, numero_suscriptores);
         }
         broker_to_publisher.id = connfd_publisher;
 
@@ -221,14 +221,14 @@ int conexiones_publicadores(){
             broker_to_publisher.response_status = OK;
         }
         if (send(connfd_publisher, &broker_to_publisher, sizeof(broker_to_publisher), 0) < 0) {
-            fprintf( stderr, "Send to the server failed...\n");
+            printf( "Send to the server publisher failed: %d...\n", connfd_publisher);
             exit(1);
         }
     }
     return 0;
 }
 
-int conexiones_suscriptores(int buen_connfd) {
+int conexiones_suscriptores(int buen_connfd, struct message someone_to_broker) {
     pthread_mutex_lock(&sem_numero_suscriptores);
     clock_gettime(CLOCK_MONOTONIC, &broker);
     strcpy(suscriber_to_broker.topic, someone_to_broker.topic);
@@ -242,29 +242,29 @@ int conexiones_suscriptores(int buen_connfd) {
     //for (int i = numero_suscriptores - 1; i < numero_suscriptores; i++){
     //    subscriber_list[i] = connfd_suscriber;
     //    strcpy(followed_topics[i], suscriber_to_broker.topic);
-    //    fprintf( stderr, "JAMAUS ARMYYYY %d %d   %s  \n\n", numero_suscriptores, subscriber_list[i], followed_topics[i]);
+    //    printf( "JAMAUS ARMYYYY %d %d   %s  \n\n", numero_suscriptores, subscriber_list[i], followed_topics[i]);
     //}
 
     subscriber_list[numero_suscriptores] = buen_connfd;
     strcpy(followed_topics[numero_suscriptores], suscriber_to_broker.topic);
-    //fprintf( stderr, "JAMAUS ARMYYYY %d %d   %s  \n\n", numero_suscriptores, subscriber_list[numero_suscriptores], followed_topics[numero_suscriptores]);
+    //printf( "JAMAUS ARMYYYY %d %d   %s  \n\n", numero_suscriptores, subscriber_list[numero_suscriptores], followed_topics[numero_suscriptores]);
     //int mandar_connfd = subscriber_list[numero_suscriptores - 1];
-    int mandar_connfd = subscriber_list[numero_suscriptores];
+    int mandar_connfd = buen_connfd;
 
     numero_suscriptores++;
     num_lista_sus = numero_suscriptores;
-    fprintf( stderr, "[%ld] Nuevo cliente ( %d) Suscriptor conectado : %s\n", broker.tv_nsec, mandar_connfd ,  suscriber_to_broker.topic);
+    printf( "[%ld] Nuevo cliente ( %d) Suscriptor conectado : %s\n", broker.tv_nsec, mandar_connfd ,  suscriber_to_broker.topic);
     if (limite_topics == 0){
-        fprintf( stderr, " %s: 1 Publicador - %d Suscriptores\n", suscriber_to_broker.topic, numero_suscriptores);
+        printf( " %s: %d Publicador - %d Suscriptores\n", suscriber_to_broker.topic, limite_topics, numero_suscriptores);
     }
     for (int i = 0; i < limite_topics; i++){
-        fprintf( stderr, " %s: 1 Publicador - %d Suscriptores\n", topic_list[i], numero_suscriptores);
+        printf( " %s: %d Publicador - %d Suscriptores\n", topic_list[i],limite_topics, numero_suscriptores);
     }
     broker_to_publisher.id = subscriber_list[numero_suscriptores - 1];
     
-    //fprintf( stderr, "MENSAJITO DEL BROKER PAPA, %d\n", mandar_connfd);
+    //printf( "MENSAJITO DEL BROKER PAPA, %d\n", mandar_connfd);
     if (send(mandar_connfd, &broker_to_publisher, sizeof(broker_to_publisher), 0) < 0) {
-        fprintf( stderr, "Send to the server failed...\n");
+        printf( "Send to the server suscriptor failed:%d ...\n", mandar_connfd);
         exit(1);
     } 
     //fprintf(stderr, "Se termino de mandar compadre\n");
@@ -273,90 +273,73 @@ int conexiones_suscriptores(int buen_connfd) {
     return 0;
 }
 
-int desconexion_publicador() {
+int desconexion_publicador(struct message someone_to_broker) {
     int nanosecons = publisher_to_broker.data.time_generated_data.tv_nsec - broker.tv_nsec;
     clock_gettime(CLOCK_MONOTONIC, &broker);
-    fprintf( stderr, "[%ld] Eliminando cliente ( %d) Publicador : %s\n",broker.tv_nsec, connfd_publisher,  publisher_to_broker.topic);
+    printf( "[%ld] Eliminando cliente ( %d) Publicador : %s\n",broker.tv_nsec, connfd_publisher,  publisher_to_broker.topic);
     broker_to_publisher.id = connfd_publisher;
 
     if (send(connfd_publisher, &broker_to_publisher, sizeof(broker_to_publisher), 0) < 0) {
-        fprintf( stderr, "Send to the server failed...\n");
+        printf( "Send to the server failed...\n");
         exit(1);
     } 
     
     // Reducimos el numero de la lista de topics
-    //if (limite_topics > 0) {
-    //    limite_topics -= 1;
-    //}
+    if (limite_topics > 0) {
+        limite_topics -= 1;
+    }
+    for (int i = 0; i < limite_topics; i++){
+        printf( " %s: %d Publicador - %d Suscriptores\n", topic_list[i], limite_topics, numero_suscriptores);
+    }
 
 }
 
 
-int desconexion_suscriptor(){
+int desconexion_suscriptor(int buen_connfd, struct message someone_to_broker){
 
     pthread_mutex_lock(&sem_numero_suscriptores);
     int existe = 0;
     int nanosecons = publisher_to_broker.data.time_generated_data.tv_nsec - broker.tv_nsec;
-    int  eliminar_connfd = someone_to_broker.id;
-    
+    int  eliminar_connfd = buen_connfd; //someone_to_broker.id
+
+
     for (int j = 0; j < MAX_NUMBER_SUSCRIBERS; j++){
+        //fprintf(stderr, "CONNFD REAL: %d, el de la lista: %d, en la posicion %d\n", eliminar_connfd, subscriber_list[j], j);
         if (eliminar_connfd == subscriber_list[j]){
             //fprintf(stderr, "CONNFD REAL: %d, el de la lista: %d, en la posicion %d\n", eliminar_connfd, subscriber_list[j], j);
             subscriber_list[j] = 0;
             existe = 1;
             if (existe = 1){
-                fprintf( stderr, "[%ld] Eliminando cliente ( %d) Suscriptor :%s \n ",broker.tv_nsec, eliminar_connfd,  publisher_to_broker.topic);
+                printf( "[%ld] Eliminando cliente ( %d) Suscriptor :%s \n ",broker.tv_nsec, eliminar_connfd,  publisher_to_broker.topic);
                 broker_to_publisher.id = eliminar_connfd;
                 if (send(eliminar_connfd, &broker_to_publisher, sizeof(broker_to_publisher), 0) < 0) {
-                    fprintf( stderr, "Send to the server failed...\n");
+                    printf( "Send to the server failed...\n");
                     exit(1);
                 } 
                 numero_suscriptores--;
                 for (int i = 0; i < limite_topics; i++){
-                    fprintf( stderr, " %s: 1 Publicador - %d Suscriptores\n", topic_list[i], numero_suscriptores);
+                    printf( " %s: %d Publicador - %d Suscriptores\n", topic_list[i], limite_topics, numero_suscriptores);
                 }
             }
         }
     }
     connfd_suscriber = 0; 
+    //fprintf(stderr, "\n\n\n");
+    //for (int i = 0; i < num_lista_sus; i++){
+    //    fprintf(stderr, "Sub: %d desuscrito\n", subscriber_list[i]);
+    //}
+    //fprintf(stderr, "\n\n\n");
     pthread_mutex_unlock(&sem_numero_suscriptores);
 }
 
-int publicar_datos() {
-
+void publicar_secuencial(){
     struct message mensaje_enviado;
-    char mensaje[100];
-    clock_gettime(CLOCK_MONOTONIC, &broker);
-    strcpy(publisher_to_broker.topic, someone_to_broker.topic);
-    someone_to_broker.action = publisher_to_broker.action;
-    someone_to_broker.id = publisher_to_broker.id;
-    publisher_to_broker.data.time_generated_data = someone_to_broker.data.time_generated_data;
-    strcpy(publisher_to_broker.data.data, someone_to_broker.data.data);
-    char *mandar_mensaje;
-    strcpy(mensaje, someone_to_broker.data.data);
-
-    fprintf( stderr, "[%ld] Recibido mensaje para publicar en topic: %s mensaje: %s - Generó:  %ld\n",broker.tv_nsec, publisher_to_broker.topic, mensaje, publisher_to_broker.data.time_generated_data.tv_sec);
-    
-    broker_to_publisher.response_status = OK;
-
-    if (send(connfd_publisher, &broker_to_publisher, sizeof(broker_to_publisher), 0) < 0) {
-        fprintf( stderr, "Send to the server failed...\n");
-        exit(1);
-    } 
-
-    //fprintf( stderr, "\n\n\n");
-    //for (int i = 0; i < numero_suscriptores; i++){
-    //    fprintf( stderr, "lista de connfd %d %s  \n", subscriber_list[i], followed_topics[i]);
-    //}
-    //fprintf( stderr, "\n\n\n");
-
-    //fprintf( stderr, "\n\n\n");
-
-
     pthread_mutex_lock(&sem_pub_bloq);
+    
+    
+
     for (int j = 0; j < num_lista_sus; j++){ //numero_suscriptores
         // Mandamos el mensaje al cliente si es necesario
-        
         if (subscriber_list[j] > 0){
             //fprintf(stderr, "Numero suscriptor: %d\n", subscriber_list[j]);
             for (int i = 0; i < limite_topics; i++){
@@ -372,25 +355,120 @@ int publicar_datos() {
                     strcpy(mensaje_enviado.topic, topic_list[i]);
                     strcpy(mensaje_enviado.data.data, data_topics[i]);
                     mensaje_enviado.data.time_generated_data = publisher_to_broker.data.time_generated_data;
-                    //fprintf( stderr, "MENSAJITO DEL BROKER PAPA, %d\n", subscriber_list[j]);
+                    
                     if (send(subscriber_list[j], &mensaje_enviado, sizeof(mensaje_enviado), 0) < 0) {
-                        fprintf( stderr, "Send to the server failed...\n");
+                        printf( "Send to the server failed...\n");
                         exit(1);
                     } 
+                    //printf( "MENSAJITO DEL BROKER PAPA, %d\n", subscriber_list[j]);
+                    printf("[%ld] Publicado mensaje topic: %s, - mensaje: %s - Generó: %ld\n",broker.tv_nsec, topic_list[i], mensaje_enviado.data.data, mensaje_enviado.data.time_generated_data.tv_sec );
                     strcpy(mensaje_enviado.data.data, "");
+                    if ( strcmp(modelo_algoritmo, "secuencial") == 0){
+                        pthread_mutex_unlock(&sem_bloq_sus);
+                    }
                 }
                 //pthread_mutex_unlock(&sem_pub_bloq);
             }
         }
     }
     pthread_mutex_unlock(&sem_pub_bloq);
+}
+
+
+void *publish_paralelo(void *arg) {
+    if (strcmp(modelo_algoritmo, "justo") == 0){
+        printf("SOY JUSTO EN LA BARRERA\n");
+        pthread_barrier_wait(&barrier);
+        printf("SOMOS LIBREEEEEEEEEEEEEEES\n");
+    }
+    pthread_mutex_lock(&sem_bloq_pub_paralelo);
+    struct message mensaje_enviado;
+    int id = *(int*)arg;
+    //publicar_paralelo();
+    //printf( "\n\n\n");
+    //for (int i = 0; i < num_lista_sus; i++){
+    //    printf( "lista de connfd %d %s  \n", subscriber_list[i], followed_topics[i]);
+    //}
+    //printf( "\n\n\n");
+    printf("ID DEL INDICADO: %d\n", id);
+    for (int j = 0; j < num_lista_sus; j++){ //numero_suscriptores
+        if (id == subscriber_list[j] && subscriber_list[j] > 0){
+            for (int i = 0; i < limite_topics; i++){
+                if (strcmp(topic_list[i], publisher_to_broker.topic) == 0 ){
+                    strcpy(data_topics[i], publisher_to_broker.data.data);
+                }
+                //fprintf(stderr, "TOPIC LIST %s, followed_topics: %s con el connfd %d y comparacion de ambos %d \n", topic_list[i], followed_topics[j], subscriber_list[j], strcmp(modelo_algoritmo, "secuencial"));
+                if (strcmp(topic_list[i], followed_topics[j] ) == 0){
+                    strcpy(mensaje_enviado.topic, topic_list[i]);
+                    strcpy(mensaje_enviado.data.data, data_topics[i]);
+                    mensaje_enviado.data.time_generated_data = publisher_to_broker.data.time_generated_data;
+                    
+                    if (send(subscriber_list[j], &mensaje_enviado, sizeof(mensaje_enviado), 0) < 0) {
+                        printf( "Send to the server failed...\n");
+                        exit(1);
+                    } 
+                    //printf( "MENSAJITO DEL BROKER PAPA, %d\n", subscriber_list[j]);
+                    printf("[%ld] Publicado mensaje topic: %s, - mensaje: %s - Generó: %ld\n",broker.tv_nsec, topic_list[i], mensaje_enviado.data.data, mensaje_enviado.data.time_generated_data.tv_sec );
+                    strcpy(mensaje_enviado.data.data, "");
+                }
+            }
+        }
+    }
+    pthread_mutex_unlock(&sem_bloq_pub_paralelo);
+    //printf("ESTOY EN PARALELO MIS PANITAAAAAAAAAAAAS con id %d\n", id);
     
+}
+
+int publicar_datos(struct message someone_to_broker) {
+    //pthread_t clientes_paralelo[numero_suscriptores];
+    pthread_t *clientes_paralelo = malloc(numero_suscriptores*sizeof(pthread_t));
+
+    char mensaje[100];
+    clock_gettime(CLOCK_MONOTONIC, &broker);
+    strcpy(publisher_to_broker.topic, someone_to_broker.topic);
+    someone_to_broker.action = publisher_to_broker.action;
+    someone_to_broker.id = publisher_to_broker.id;
+    publisher_to_broker.data.time_generated_data = someone_to_broker.data.time_generated_data;
+    strcpy(publisher_to_broker.data.data, someone_to_broker.data.data);
+    char *mandar_mensaje;
+    strcpy(mensaje, someone_to_broker.data.data);
+
+    printf( "[%ld] Recibido mensaje para publicar en topic: %s mensaje: %s - Generó:  %ld\n",broker.tv_nsec, publisher_to_broker.topic, mensaje, publisher_to_broker.data.time_generated_data.tv_sec);
+    
+    broker_to_publisher.response_status = OK;
+
+    if (send(connfd_publisher, &broker_to_publisher, sizeof(broker_to_publisher), 0) < 0) {
+        printf( "Send to the server failed...\n");
+        exit(1);
+    } 
+    
+    
+    if ( strcmp(modelo_algoritmo, "paralelo") == 0 || strcmp(modelo_algoritmo, "justo") == 0){
+        pthread_barrier_init(&barrier, NULL, num_lista_sus);
+        for (int i = 0; i < num_lista_sus; i++){
+            //printf("MANDAMOS BIEN EL ID: %d\n", subscriber_list[i]);
+            if(pthread_create(&clientes_paralelo[i], NULL, publish_paralelo, (void *) &subscriber_list[i] ) != 0) {
+                printf( "Fallo al ejecutar pthread_create de clientes \n");
+                exit(1);
+            }  
+        }
+        for(int i = 0; i < num_lista_sus; i++){
+            if(pthread_join(clientes_paralelo[i], NULL) != 0){
+                printf( "Fallo al ejecutar pthread_join de clientes \n");
+                exit(1);
+            }
+        }   
+    }else if (strcmp(modelo_algoritmo, "secuencial") == 0){
+        publicar_secuencial();
+    }
+    
+    free(clientes_paralelo);
     return 0;
 }
 
 int close_server() {
     if(close(sockfd) == 1) {
-        fprintf( stderr, "Close failed\n");
+        printf( "Close failed\n");
         exit(1);
     }
   return 0;
@@ -406,16 +484,16 @@ int client_conection(char* ip, int port, int tipo) {
     struct cliente mandar;
 
     if (tipo == 0){
-        fprintf( stderr, "[%ld] Publisher conectado con el broker correctamente.\n", clientes_time.tv_nsec);
+        printf( "[%ld] Publisher conectado con el broker correctamente.\n", clientes_time.tv_nsec);
         mandar.cliente = PUBLICADOR;
     }else if(tipo == 1){
-        fprintf( stderr, "[%ld] Suscriber conectado con el broker correctamente.\n", clientes_time.tv_nsec);
+        printf( "[%ld] Suscriber conectado con el broker correctamente.\n", clientes_time.tv_nsec);
         mandar.cliente = SUSCRIPTOR;
     }
     // Creamos un socket TCP y comprobamos que se ha creado correctamente
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1) {
-        fprintf( stderr, "Socket creation failed...\n" );
+        printf( "Socket creation failed...\n" );
         exit(1);
     }
     // Le asignamos una IP y un puerto
@@ -426,11 +504,11 @@ int client_conection(char* ip, int port, int tipo) {
 
     // Conectamos el cliente al socket del servidor y comprobamos
     if ((connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr))) < 0) {
-        fprintf( stderr, "Connection with the server failed...\n");
+        printf( "Connection with the server failed...\n");
         exit(1);
     }
     if (send(sockfd, &mandar, sizeof(mandar), 0) < 0) {
-        fprintf( stderr, "Send to the server failed...\n");
+        printf( "Send to the server failed...\n");
     } 
     return 0;
 }
@@ -444,21 +522,21 @@ int topic_conection(char *topic) {
     message_to_broker.action = REGISTER_PUBLISHER;
     //Tiempo empleado para que se conecte el publisher
     message_to_broker.data.time_generated_data = clientes_time;
-    //fprintf( stderr, "me da tiempo a mandar el mensaje??? %ld\n\n", clientes_time.tv_sec);
+    //printf( "me da tiempo a mandar el mensaje??? %ld\n\n", clientes_time.tv_sec);
     //Mandamos en que topic vamos a escribir y se lo mandamos al broker 
     if (send(sockfd, &message_to_broker, sizeof(message_to_broker), 0) < 0) {
-        fprintf( stderr, "Send to the server failed...\n");
+        printf( "Send to the server failed...\n");
     }    
 
     // Recibimos el response del broker
     if ((recv(sockfd, &response_from_broker, sizeof(response_from_broker), 0)) < 0) {
-        fprintf( stderr, "Recv from the client failed...\n");
+        printf( "Recv from the client failed...\n");
     }
 
     if (response_from_broker.response_status == OK){
-        fprintf( stderr, "[%ld] Registrado correctamente con ID:  %d para topic  %s\n", clientes_time.tv_nsec, response_from_broker.id, message_to_broker.topic );
+        printf( "[%ld] Registrado correctamente con ID:  %d para topic  %s\n", clientes_time.tv_nsec, response_from_broker.id, message_to_broker.topic );
     }else{
-        fprintf( stderr, "[%ld] Error al hacer el registro: error= %d\n", clientes_time.tv_nsec, response_from_broker.response_status);
+        printf( "[%ld] Error al hacer el registro: error= %d\n", clientes_time.tv_nsec, response_from_broker.response_status);
     }
 
     return 0;
@@ -473,16 +551,16 @@ int remove_topic(char *topic) {
     clock_gettime(CLOCK_MONOTONIC, &clientes_time);
     //Mandamos en que topic vamos a desuscribirnos y se lo mandamos al broker
     if (send(sockfd, &message_to_broker, sizeof(message_to_broker), 0) < 0) {
-        fprintf( stderr, "Send to the server failed...\n");
+        printf( "Send to the server failed...\n");
     } 
 
     // Recibimos el response del broker
     if ((recv(sockfd, &response_from_broker, sizeof(response_from_broker), 0)) < 0) {
-        fprintf( stderr, "Recv from the client failed...\n");
+        printf( "Recv from the client failed...\n");
     }
 
-    fprintf( stderr, "[%ld] De-Registrado ( %d) correctamente del broker.\n", clientes_time.tv_nsec, response_from_broker.id);
-    //fprintf( stderr, "ESTAMOS DENTRO PERO YA TERMINAMOS\n");
+    printf( "[%ld] De-Registrado ( %d) correctamente del broker.\n", clientes_time.tv_nsec, response_from_broker.id);
+    //printf( "ESTAMOS DENTRO PERO YA TERMINAMOS\n");
     return 0;
 }
 
@@ -501,13 +579,13 @@ int send_message(char *topic) {
     strcpy(message_to_broker.data.data, mensaje);
     //Mandamos en que topic vamos a escribir y se lo mandamos al broker
     if (send(sockfd, &message_to_broker, sizeof(message_to_broker), 0) < 0) {
-        fprintf( stderr, "Send to the server failed...\n");
+        printf( "Send to the server failed...\n");
     }    
-    fprintf( stderr, "[%ld] Publicado mensaje topic:  %s - mensaje:  %s -Generó:  %ld\n",clientes_time.tv_nsec, message_to_broker.topic, message_to_broker.data.data, clientes_time.tv_sec );
+    printf( "[%ld] Publicado mensaje topic:  %s - mensaje:  %s -Generó:  %ld\n",clientes_time.tv_nsec, message_to_broker.topic, message_to_broker.data.data, clientes_time.tv_sec );
 
     // Recibimos el response del broker
     if ((recv(sockfd, &response_from_broker, sizeof(response_from_broker), 0)) < 0) {
-        fprintf( stderr, "Recv from the client failed...\n");
+        printf( "Recv from the client failed...\n");
     }
 }
 
@@ -517,7 +595,6 @@ int send_message(char *topic) {
 int topic_suscription(char *topic) {
        
     struct timespec end;
-    struct message publicacion;
     
     
     // Guardamos el topic donde queremos escribir
@@ -528,31 +605,42 @@ int topic_suscription(char *topic) {
     message_to_broker.data.time_generated_data = end;
     //Mandamos en que topic queremos recibir y se lo mandamos al broker
     if (send(sockfd, &message_to_broker, sizeof(message_to_broker), 0) < 0) {
-        fprintf( stderr, "Send to the server failed...\n");
+        printf( "Send to the server failed...\n");
     }    
     
     // Recibimos la respuesta del broker
     if ((recv(sockfd, &response_from_broker, sizeof(response_from_broker), 0)) < 0) {
-        fprintf( stderr, "Recv from the client failed...\n");
+        printf( "Recv from the client failed...\n");
     }
     if (response_from_broker.response_status == OK){
-        fprintf( stderr, "[%ld] Registrado correctamente con ID:  %d para topic  %s\n", clientes_time.tv_nsec, response_from_broker.id, message_to_broker.topic);
+        printf( "[%ld] Registrado correctamente con ID:  %d para topic  %s\n", clientes_time.tv_nsec, response_from_broker.id, message_to_broker.topic);
 
     }else {
-        fprintf( stderr, "[%ld] Error al hacer el registro:  %d\n", clientes_time.tv_nsec, response_from_broker.response_status);
+        printf( "[%ld] Error al hacer el registro:  %d\n", clientes_time.tv_nsec, response_from_broker.response_status);
 
     }
+    
+     
+    return response_from_broker.id;
+}
 
-    // Recibimos la posible publicacion del suscriptor
+int get_message(char *topic){
+
+    
+    struct message publicacion;
+    int salida = 0;
     if ((recv(sockfd, &publicacion, sizeof(publicacion), 0)) < 0) {
-        fprintf( stderr, "Recv from the client failed...\n");
+        printf( "Recv from the client failed...\n");
     }
     clock_gettime(CLOCK_MONOTONIC, &clientes_time);
         
-    if (publicacion.data.data[0] != '\0'){
-        fprintf( stderr, "[%ld] Recibido mensaje topic:  %s - mensaje:  %s - Generó:  %ld - Recibido:  %ld - Latencia:  %f.\n", clientes_time.tv_nsec, publicacion.topic, publicacion.data.data, clientes_time.tv_sec, publicacion.data.time_generated_data.tv_sec, (-publicacion.data.time_generated_data.tv_nsec + clientes_time.tv_nsec)*pow(10, -9));
+    if (publicacion.data.data[0] != '\0' && strcmp(publicacion.data.data, "FUENLABRADA") == 0){
+        printf( "[%ld] Recibido mensaje topic:  %s - mensaje:  %s - Generó:  %ld - Recibido:  %ld - Latencia:  %f.\n", clientes_time.tv_nsec, publicacion.topic, publicacion.data.data, clientes_time.tv_sec, publicacion.data.time_generated_data.tv_sec, (-publicacion.data.time_generated_data.tv_nsec + clientes_time.tv_nsec)*pow(10, -9));
+    }else {
+        salida = 1;
     }
-    return response_from_broker.id;
+    // Recibimos la posible publicacion del suscriptor
+    return salida;
 }
 
 
@@ -563,24 +651,24 @@ int unfollow_topic(char *topic, int id_actual ) {
     //Decimos que queremos registrar un suscriptor
     message_to_broker.action = UNREGISTER_SUBSCRIBER;
     message_to_broker.id = id_actual;
-    fprintf(stderr, "Desconectamos nuestro suscriptor\n");
+    //fprintf(stderr, "Desconectamos nuestro suscriptor\n");
     //Mandamos en que topic vamos a desuscribirnos y se lo mandamos al broker
     if (send(sockfd, &message_to_broker, sizeof(message_to_broker), 0) < 0) {
-        fprintf( stderr, "Send to the server failed...\n");
+        printf( "Send to the server failed...\n");
     } 
     // Recibimos el response del broker
     if ((recv(sockfd, &response_from_broker, sizeof(response_from_broker), 0)) < 0) {
-        fprintf( stderr, "Recv from the client failed...\n");
+        printf( "Recv from the client failed...\n");
     }
-    fprintf( stderr, "[%ld] De-Registrado ( %d) correctamente del broker.\n", clientes_time.tv_nsec, response_from_broker.id);
+    printf( "[%ld] De-Registrado ( %d) correctamente del broker.\n", clientes_time.tv_nsec, response_from_broker.id);
     return 0;
 }
 
 
 int close_client() {
-    //fprintf( stderr, "CERRAMOS CLIENTE");
+    //printf( "CERRAMOS CLIENTE");
     if(close(sockfd) == 1) {
-        fprintf( stderr, "Close failed\n");
+        printf( "Close failed\n");
         exit(1);
     }
     return 0;

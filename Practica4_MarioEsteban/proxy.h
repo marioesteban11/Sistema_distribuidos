@@ -12,6 +12,10 @@
 #include <semaphore.h>
 #include <time.h>
 #include <math.h>
+#include <signal.h>
+
+
+
 ////////////////////////////////////////////////////////////////////
 // Estructuras usadas por el publicador y subscrictor
 enum operations {
@@ -52,11 +56,13 @@ struct response {
 int aceptar_cliente(char *mode);
 int server_conection(int port);
 int close_server();
-int conexiones_publicadores();
-int conexiones_suscriptores(int buen_connfd);
-int desconexion_publicador();
-int desconexion_suscriptor();
-int publicar_datos();
+int conexiones_publicadores(struct message someone_to_broker);
+int conexiones_suscriptores(int buen_connfd, struct message someone_to_broker);
+int desconexion_publicador(struct message someone_to_broker);
+int desconexion_suscriptor(int buen_connfd, struct message someone_to_broker);
+int publicar_datos(struct message someone_to_broker);
+
+
 void semaforo();
 
 int client_conection(char* ip, int port, int tipo);
@@ -66,4 +72,5 @@ int send_message(char *topic);
 int close_client();
 
 int topic_suscription(char *topic);
+int get_message(char *topic);
 int unfollow_topic(char *topic, int id_actual);

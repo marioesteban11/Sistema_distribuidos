@@ -8,6 +8,14 @@
 #include <pthread.h>
 #include "proxy.h"
 #include <getopt.h>
+#include <signal.h>
+
+
+int a = 0;
+void manejador (int signum){
+    printf("a\n");
+    a = 7;
+}
 
 int main(int argc, char *argv[])
 {
@@ -42,6 +50,11 @@ int main(int argc, char *argv[])
     server_conection(port_number);
     semaforo();
     while (1) {
+        //signal(SIGINT,manejador);
+        //printf("a\n");
+        //if (a != 0){
+        //    break;
+        //}
         int modo = aceptar_cliente(mode);
     }
 

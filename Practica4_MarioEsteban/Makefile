@@ -4,7 +4,7 @@
 
 
 CC = gcc
-CFLAGS = -g -O2 -pthread -Werror -Wshadow
+CFLAGS = -g -O2 -pthread -Werror -Wshadow 
 
 SRC_PROXY = proxy.h proxy.c
 SRC_1 = publisher.c $(SRC_PROXY)

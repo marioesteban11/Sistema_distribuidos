@@ -8,7 +8,13 @@
 #include <pthread.h>
 #include "proxy.h"
 #include <getopt.h>
+#include <signal.h>
 
+
+int a = 0;
+void manejador (int signum){
+    a = 7;
+}
 
 int main(int argc, char *argv[])
 {
@@ -45,15 +51,21 @@ int main(int argc, char *argv[])
 
     // Miramos si se pasa como argumento un lector o un escritor
     // y miramos el numero de threads/clientes que van a ser ejecutados
-    int tipo = 0;
+    int tipo = 0, i = 0;
     client_conection(ip_port, port_number, tipo);
     // Crear un topic o conectarse a él
     topic_conection(topic);
 
-    while (1) {
+    while (i < 50 ) {
         // Mandamos un mensaje a traves del topic correspondiente
+        signal(SIGINT,manejador);
+        if (a != 0){
+            break;
+        }
         send_message(topic);
+
         sleep(5);
+        i++;
     }
     
     // Desconectarse del topic 

@@ -8,8 +8,13 @@
 #include <pthread.h>
 #include "proxy.h"
 #include <getopt.h>
+#include <signal.h>
 
 
+int a = 0;
+void manejador (int signum){
+    a = 7;
+}
 int main(int argc, char *argv[])
 {
     srand (time(NULL));
@@ -46,7 +51,20 @@ int main(int argc, char *argv[])
     int tipo = 1;
     client_conection(ip_port, port_number, tipo);
     // suscripcion de un topic al broker
-    int id_actual = topic_suscription(topic);
+    int id_actual = 0, salida = 0;
+    
+    id_actual = topic_suscription(topic);
+    while (1){
+        signal(SIGINT,manejador);
+        if (a != 0){
+            break;
+        }
+        salida = get_message(topic);
+        if (salida != 0){
+            break;
+        }
+    }
+    
 
 
     // Dexconexion de un topic del browser
