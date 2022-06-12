@@ -6,6 +6,21 @@ Primer test.- 1 publicador, 1 suscriptor con topic bueno y 1 suscriptor con mal 
 ./publisher --ip 0.0.0.0 --port 9963 --topic TEST
 
 
+El script para ejecutar N numero de subscriptores es: ./script.sh al que se le tienen que cambiar el numero de programas a lanzar
+dentro del propio script.
+
+En este script, también hacemos la redirección de la entrada estándar a los ficheros con tee -a fichero.txt por ejemplo.
+
+Si se utiliza tee -a, antes de cada ejecucción habrá que borrar el fichero (si existiera) porque si no se sobreescriben y el fichero se vuelve ilegible
+
+Una vez han terminado todo el programa se tendrá que ejecutar el script recomplilacion_datos.sh para generar un fichero con solo las Latencias requeridas.
+OJO: este ultimo script como el anterior requiere que pongas manualmente el nombre del fichero origen y del fichero final para que genere bien los datos
+
+Y por último el fichero datos.py que generará el fichero results_latency.csv, en el que como en los dos scripts anteriores habrá que introducir el nombre del fichero.
+
+Unos ejemplos para que la ejecucción sea más sencilla.
+
+
 Segundo test.- 1 publicador, 500 suscriptores con buen topic, broker en secuencial 
 
 ./broker --port 9409 --mode secuencial
@@ -24,3 +39,7 @@ Cuarto test.-  1 publicador, 500 suscriptores con buen topic, broker en justo
 ./broker --port 9903 --mode justo
 ./subscriber --ip 0.0.0.0 --port 9903 --topic TEST [500]
 ./publisher --ip 0.0.0.0 --port 9903 --topic TEST
+
+
+
+

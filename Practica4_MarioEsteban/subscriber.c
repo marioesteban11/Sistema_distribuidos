@@ -54,7 +54,8 @@ int main(int argc, char *argv[])
     int id_actual = 0, salida = 0;
     
     id_actual = topic_suscription(topic);
-    while (1){
+    int i = 0;
+    while (i < 50){
         signal(SIGINT,manejador);
         if (a != 0){
             break;
@@ -63,9 +64,8 @@ int main(int argc, char *argv[])
         if (salida != 0){
             break;
         }
+        i++;
     }
-    
-
 
     // Dexconexion de un topic del browser
     unfollow_topic(topic, id_actual);

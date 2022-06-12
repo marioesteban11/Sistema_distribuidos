@@ -43,32 +43,23 @@ struct timespec clientes_time;
 
 // Semaforo
 
-pthread_mutex_t sem_time_broker;
-pthread_mutex_t sem_clientes_time;
-pthread_mutex_t sem_recv_thread;
 pthread_mutex_t sem_numero_suscriptores;
-pthread_mutex_t sem_enviados;
-pthread_mutex_t sem_desuscripcion;
 pthread_mutex_t sem_bloq_sus;
 pthread_mutex_t sem_pub_bloq;
 pthread_mutex_t sem_set_connfd;
 pthread_mutex_t sem_bloq_pub_paralelo;
+pthread_mutex_t imprimir;
 pthread_barrier_t barrier;
 // Funciones broker
 
 void semaforo() {
 
-    pthread_mutex_init(&sem_time_broker, NULL);
-    pthread_mutex_init(&sem_clientes_time, NULL);
-    pthread_mutex_init(&sem_recv_thread, NULL);
     pthread_mutex_init(&sem_numero_suscriptores, NULL);
-    pthread_mutex_init(&sem_enviados, NULL);
-    pthread_mutex_init(&sem_desuscripcion, NULL);
     pthread_mutex_init(&sem_bloq_sus, NULL);
     pthread_mutex_init(&sem_pub_bloq, NULL);
     pthread_mutex_init(&sem_set_connfd, NULL);
     pthread_mutex_init(&sem_bloq_pub_paralelo, NULL);
-    
+    pthread_mutex_init(&imprimir, NULL);
 }
 
 int server_conection(int port) {
@@ -276,7 +267,8 @@ int conexiones_suscriptores(int buen_connfd, struct message someone_to_broker) {
 int desconexion_publicador(struct message someone_to_broker) {
     int nanosecons = publisher_to_broker.data.time_generated_data.tv_nsec - broker.tv_nsec;
     clock_gettime(CLOCK_MONOTONIC, &broker);
-    printf( "[%ld] Eliminando cliente ( %d) Publicador : %s\n",broker.tv_nsec, connfd_publisher,  publisher_to_broker.topic);
+    printf( "[%ld] Eliminado cliente ( %d) Publicador : %s\n",broker.tv_nsec, connfd_publisher,  publisher_to_broker.topic);
+
     broker_to_publisher.id = connfd_publisher;
 
     if (send(connfd_publisher, &broker_to_publisher, sizeof(broker_to_publisher), 0) < 0) {
@@ -310,7 +302,7 @@ int desconexion_suscriptor(int buen_connfd, struct message someone_to_broker){
             subscriber_list[j] = 0;
             existe = 1;
             if (existe = 1){
-                printf( "[%ld] Eliminando cliente ( %d) Suscriptor :%s \n ",broker.tv_nsec, eliminar_connfd,  publisher_to_broker.topic);
+                printf( "[%ld] Eliminado cliente ( %d) Suscriptor :%s \n ",broker.tv_nsec, eliminar_connfd,  publisher_to_broker.topic);
                 broker_to_publisher.id = eliminar_connfd;
                 if (send(eliminar_connfd, &broker_to_publisher, sizeof(broker_to_publisher), 0) < 0) {
                     printf( "Send to the server failed...\n");
@@ -335,8 +327,7 @@ int desconexion_suscriptor(int buen_connfd, struct message someone_to_broker){
 void publicar_secuencial(){
     struct message mensaje_enviado;
     pthread_mutex_lock(&sem_pub_bloq);
-    
-    
+
 
     for (int j = 0; j < num_lista_sus; j++){ //numero_suscriptores
         // Mandamos el mensaje al cliente si es necesario
@@ -377,20 +368,19 @@ void publicar_secuencial(){
 
 void *publish_paralelo(void *arg) {
     if (strcmp(modelo_algoritmo, "justo") == 0){
-        printf("SOY JUSTO EN LA BARRERA\n");
         pthread_barrier_wait(&barrier);
-        printf("SOMOS LIBREEEEEEEEEEEEEEES\n");
     }
     pthread_mutex_lock(&sem_bloq_pub_paralelo);
     struct message mensaje_enviado;
     int id = *(int*)arg;
+    
     //publicar_paralelo();
     //printf( "\n\n\n");
     //for (int i = 0; i < num_lista_sus; i++){
     //    printf( "lista de connfd %d %s  \n", subscriber_list[i], followed_topics[i]);
     //}
     //printf( "\n\n\n");
-    printf("ID DEL INDICADO: %d\n", id);
+    //printf("ID DEL INDICADO: %d\n", id);
     for (int j = 0; j < num_lista_sus; j++){ //numero_suscriptores
         if (id == subscriber_list[j] && subscriber_list[j] > 0){
             for (int i = 0; i < limite_topics; i++){
@@ -442,7 +432,7 @@ int publicar_datos(struct message someone_to_broker) {
         exit(1);
     } 
     
-    
+    printf("[%ld] Enviando mensaje en topic %s a %d suscriptores\n", broker.tv_nsec, publisher_to_broker.topic, num_lista_sus);
     if ( strcmp(modelo_algoritmo, "paralelo") == 0 || strcmp(modelo_algoritmo, "justo") == 0){
         pthread_barrier_init(&barrier, NULL, num_lista_sus);
         for (int i = 0; i < num_lista_sus; i++){
@@ -633,12 +623,13 @@ int get_message(char *topic){
         printf( "Recv from the client failed...\n");
     }
     clock_gettime(CLOCK_MONOTONIC, &clientes_time);
-        
+    pthread_mutex_lock(&imprimir);
     if (publicacion.data.data[0] != '\0' && strcmp(publicacion.data.data, "FUENLABRADA") == 0){
-        printf( "[%ld] Recibido mensaje topic:  %s - mensaje:  %s - Generó:  %ld - Recibido:  %ld - Latencia:  %f.\n", clientes_time.tv_nsec, publicacion.topic, publicacion.data.data, clientes_time.tv_sec, publicacion.data.time_generated_data.tv_sec, (-publicacion.data.time_generated_data.tv_nsec + clientes_time.tv_nsec)*pow(10, -9));
+        printf( "[%ld] Recibido mensaje topic:  %s - mensaje:  %s - Generó:  %ld - Recibido:  %ld - Latencia:  %f\n", clientes_time.tv_nsec, publicacion.topic, publicacion.data.data, clientes_time.tv_sec, publicacion.data.time_generated_data.tv_sec, (-publicacion.data.time_generated_data.tv_nsec + clientes_time.tv_nsec)*pow(10, -9));
     }else {
         salida = 1;
     }
+    pthread_mutex_unlock(&imprimir);
     // Recibimos la posible publicacion del suscriptor
     return salida;
 }

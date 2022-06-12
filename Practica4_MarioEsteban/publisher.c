@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
         }
         send_message(topic);
 
-        sleep(5);
+        sleep(1);
         i++;
     }
     
